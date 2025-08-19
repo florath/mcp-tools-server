@@ -1,0 +1,29 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 7091,
+        "debug": true
+    },
+    "security": {
+        "allowed_directories": [
+            "/app/config",
+            "/tmp/workspace",
+            "/home/user/projects"
+        ],
+        "max_file_size_mb": 100,
+        "allowed_file_extensions": [
+            ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
+            ".md", ".csv", ".xml", ".html", ".css", ".sql"
+        ]
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "json"
+    },
+    "tools": {
+        "file_reader": {
+            "enabled": true,
+            "max_files_per_request": 10
+        }
+    }
+}

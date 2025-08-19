@@ -1,0 +1,40 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 7091,
+        "debug": true
+    },
+    "security": {
+        "allowed_directories": [
+            "/tmp/Game-Of-Live"
+        ],
+        "max_file_size_mb": 100,
+        "allowed_file_extensions": [
+            ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
+            ".md", ".csv", ".xml", ".html", ".css", ".sql"
+        ]
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "json"
+    },
+    "tools": {
+        "file_reader": {
+            "enabled": true,
+            "max_files_per_request": 10
+        },
+        "file_writer": {
+            "enabled": true
+        },
+        "python_linter": {
+            "enabled": true,
+            "timeout_seconds": 60
+        },
+        "directory_manager": {
+            "enabled": true
+        },
+        "file_editor": {
+            "enabled": true
+        }
+    }
+}

@@ -57,8 +57,8 @@ class SecurityValidator:
     def validate_directory_path(self, dir_path: str) -> Path:
         """Validate directory path against security policies."""
         try:
-            # Convert to Path and resolve
-            path = Path(dir_path).resolve()
+            # Handle relative paths by trying to resolve against allowed directories
+            path = self._resolve_path(dir_path)
             
             # Check if path exists
             if not path.exists():
@@ -85,7 +85,14 @@ class SecurityValidator:
             validate_filename(filename)
             
             # Additional checks
-            if filename.startswith('.'):
+            # Allow common hidden development files
+            allowed_hidden_files = {
+                '.gitignore', '.dockerignore', '.env', '.python-version',
+                '.eslintrc', '.prettierrc', '.editorconfig', '.flake8',
+                '.pylintrc', '.mypy.ini', '.coverage', '.pytest_cache'
+            }
+            
+            if filename.startswith('.') and filename not in allowed_hidden_files:
                 raise SecurityError("Hidden files not allowed")
             
             if '..' in filename:
@@ -127,8 +134,8 @@ class SecurityValidator:
     def validate_directory_path_for_creation(self, dir_path: str) -> Path:
         """Validate directory path for creation operations (allows non-existing paths)."""
         try:
-            # Convert to Path and resolve
-            path = Path(dir_path).resolve()
+            # Handle relative paths by trying to resolve against allowed directories
+            path = self._resolve_path(dir_path)
             
             # Check if path is within allowed directories
             if not self._is_path_allowed(path):
@@ -140,6 +147,32 @@ class SecurityValidator:
             if isinstance(e, SecurityError):
                 raise
             raise SecurityError(f"Directory path validation error: {e}")
+    
+    def _resolve_path(self, path_str: str) -> Path:
+        """Resolve path, handling relative paths against allowed directories."""
+        path = Path(path_str)
+        
+        # If it's already absolute, just resolve it
+        if path.is_absolute():
+            return path.resolve()
+        
+        # For relative paths, try to resolve against each allowed directory
+        for allowed_dir in self.allowed_dirs:
+            candidate_path = (allowed_dir / path).resolve()
+            # Return the first candidate that would be within allowed directories
+            if self._is_path_allowed_raw(candidate_path, allowed_dir):
+                return candidate_path
+        
+        # If no allowed directory works, resolve normally (will likely fail security check)
+        return path.resolve()
+    
+    def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:
+        """Check if path is within a specific allowed directory (without looping through all)."""
+        try:
+            return path.is_relative_to(allowed_dir)
+        except ValueError:
+            # Fallback to string comparison for edge cases
+            return str(path).startswith(str(allowed_dir))
     
     def get_security_info(self) -> dict:
         """Get current security configuration info."""

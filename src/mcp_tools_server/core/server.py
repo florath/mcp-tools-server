@@ -139,11 +139,17 @@ class MCPToolsServer:
                 # Execute tool
                 result = await tool_instance.execute(params)
                 
-                return {
+                response = {
                     "success": True,
                     "tool": tool_name,
                     "result": result
                 }
+                
+                # Log first 500 characters of response
+                response_str = str(response)
+                logger.info(f"Response for {tool_name} (first 500 chars): {response_str[:500]}")
+                
+                return response
                 
             except ValueError as e:
                 # Handle client errors (invalid parameters, security violations)

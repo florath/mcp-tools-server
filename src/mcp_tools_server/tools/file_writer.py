@@ -35,14 +35,14 @@ class FileWriterTool(BaseTool):
             if not file_path:
                 raise ValueError("file_path parameter is required")
             
-            # Convert to Path object
-            target_path = Path(file_path)
-            
-            # Security validation for the target directory
+            # Convert to Path object and resolve relative paths
             if self.security_validator:
-                # Validate the parent directory is allowed
+                # Use security validator to resolve path (handles relative paths)
+                target_path = self.security_validator._resolve_path(file_path)
+                
+                # Validate the parent directory is allowed (for creation)
                 parent_dir = target_path.parent
-                self.security_validator.validate_directory_path(str(parent_dir))
+                self.security_validator.validate_directory_path_for_creation(str(parent_dir))
                 
                 # Validate filename
                 self.security_validator.validate_filename(target_path.name)
@@ -50,6 +50,8 @@ class FileWriterTool(BaseTool):
                 # Check file extension is allowed
                 if target_path.suffix and not self._is_extension_allowed(target_path):
                     raise SecurityError(f"File extension not allowed: {target_path.suffix}")
+            else:
+                target_path = Path(file_path)
             
             logger.info(f"Writing file: {target_path}")
             

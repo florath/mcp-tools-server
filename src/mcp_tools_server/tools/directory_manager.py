@@ -71,19 +71,17 @@ class DirectoryManagerTool(BaseTool):
                     "error": "directory_path parameter is required"
                 }
             
-            # Security validation
+            # Security validation and path resolution
             try:
                 if operation == "create":
-                    self.security_validator.validate_directory_path_for_creation(directory_path)
+                    path = self.security_validator.validate_directory_path_for_creation(directory_path)
                 else:
-                    self.security_validator.validate_directory_path(directory_path)
+                    path = self.security_validator.validate_directory_path(directory_path)
             except (ValueError, Exception) as e:
                 return {
                     "success": False,
                     "error": f"Security validation failed: {str(e)}"
                 }
-            
-            path = Path(directory_path)
             
             if operation == "create":
                 return await self._create_directory(path, create_parents)

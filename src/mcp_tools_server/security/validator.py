@@ -149,14 +149,14 @@ class SecurityValidator:
         if path.is_absolute():
             return path.resolve()
         
-        # For relative paths, resolve against the allowed directory
+        # For relative paths, resolve against the allowed directory if it exists
         if self.allowed_dir:
             candidate_path = (self.allowed_dir / path).resolve()
-            # Return the candidate if it would be within the allowed directory
-            if self._is_path_allowed_raw(candidate_path, self.allowed_dir):
-                return candidate_path
+            # Always return the candidate path when we have an allowed directory
+            # The path validation will handle security checks
+            return candidate_path
         
-        # If no allowed directory or it doesn't work, resolve normally (will likely fail security check)
+        # If no allowed directory, resolve normally (will likely fail security check)
         return path.resolve()
     
     def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:

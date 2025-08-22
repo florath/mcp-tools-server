@@ -105,14 +105,17 @@ class FileFinderTool(BaseTool):
                         "error": f"Security validation failed for search directory: {str(e)}"
                     }
             else:
-                # Use all allowed directories
-                allowed_dirs = self.security_validator.allowed_dirs
-                if not allowed_dirs:
+                # Use the allowed directory
+                allowed_dir = self.security_validator.allowed_dir
+                if not allowed_dir:
                     return {
                         "success": False,
-                        "error": "No allowed directories configured and no search_directory specified"
+                        "error": "No allowed directory configured and no search_directory specified"
                     }
-                search_paths = [d for d in allowed_dirs if d.exists() and d.is_dir()]
+                if allowed_dir.exists() and allowed_dir.is_dir():
+                    search_paths = [allowed_dir]
+                else:
+                    search_paths = []
             
             # Search for files
             results = await self._search_files(

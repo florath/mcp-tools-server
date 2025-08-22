@@ -48,6 +48,10 @@ def main():
         type=int,
         help="Override port from config"
     )
+    parser.add_argument(
+        "--allowed-directory",
+        help="Override allowed directory from config"
+    )
     
     args = parser.parse_args()
     
@@ -63,13 +67,15 @@ def main():
         config.server.host = args.host
     if args.port:
         config.server.port = args.port
+    if args.allowed_directory:
+        config.security.allowed_directory = args.allowed_directory
     
     # Setup logging
     setup_logging(config)
     logger = logging.getLogger(__name__)
     
     logger.info(f"Starting MCP Tools Server on {config.server.host}:{config.server.port}")
-    logger.info(f"Security: {len(config.security.allowed_directories)} allowed directories")
+    logger.info(f"Security: allowed directory = {config.security.allowed_directory or 'unrestricted'}")
     
     # Create server
     try:

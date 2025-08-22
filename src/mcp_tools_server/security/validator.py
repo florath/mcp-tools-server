@@ -18,7 +18,7 @@ class SecurityValidator:
     
     def __init__(self, security_config: SecurityConfig):
         self.config = security_config
-        self.allowed_dirs = [Path(d).resolve() for d in security_config.allowed_directories]
+        self.allowed_dir = Path(security_config.allowed_directory).resolve() if security_config.allowed_directory else None
         self.max_file_size_bytes = security_config.max_file_size_mb * 1024 * 1024
     
     def validate_file_path(self, file_path: str) -> Path:
@@ -104,23 +104,16 @@ class SecurityValidator:
             raise SecurityError(f"Filename validation error: {e}")
     
     def _is_path_allowed(self, path: Path) -> bool:
-        """Check if path is within allowed directories."""
-        if not self.allowed_dirs:
-            return True  # No restrictions if no directories specified
+        """Check if path is within the allowed directory."""
+        if not self.allowed_dir:
+            return True  # No restrictions if no directory specified
         
         try:
-            for allowed_dir in self.allowed_dirs:
-                if path.is_relative_to(allowed_dir):
-                    return True
+            return path.is_relative_to(self.allowed_dir)
         except ValueError:
             # is_relative_to can raise ValueError on different filesystems
-            pass
-        
-        # Fallback to string comparison for edge cases
-        path_str = str(path)
-        for allowed_dir in self.allowed_dirs:
-            if path_str.startswith(str(allowed_dir)):
-                return True
+            # Fallback to string comparison for edge cases
+            return str(path).startswith(str(self.allowed_dir))
         
         return False
     
@@ -149,21 +142,21 @@ class SecurityValidator:
             raise SecurityError(f"Directory path validation error: {e}")
     
     def _resolve_path(self, path_str: str) -> Path:
-        """Resolve path, handling relative paths against allowed directories."""
+        """Resolve path, handling relative paths against the allowed directory."""
         path = Path(path_str)
         
         # If it's already absolute, just resolve it
         if path.is_absolute():
             return path.resolve()
         
-        # For relative paths, try to resolve against each allowed directory
-        for allowed_dir in self.allowed_dirs:
-            candidate_path = (allowed_dir / path).resolve()
-            # Return the first candidate that would be within allowed directories
-            if self._is_path_allowed_raw(candidate_path, allowed_dir):
+        # For relative paths, resolve against the allowed directory
+        if self.allowed_dir:
+            candidate_path = (self.allowed_dir / path).resolve()
+            # Return the candidate if it would be within the allowed directory
+            if self._is_path_allowed_raw(candidate_path, self.allowed_dir):
                 return candidate_path
         
-        # If no allowed directory works, resolve normally (will likely fail security check)
+        # If no allowed directory or it doesn't work, resolve normally (will likely fail security check)
         return path.resolve()
     
     def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:
@@ -177,7 +170,7 @@ class SecurityValidator:
     def get_security_info(self) -> dict:
         """Get current security configuration info."""
         return {
-            "allowed_directories": [str(d) for d in self.allowed_dirs],
+            "allowed_directory": str(self.allowed_dir) if self.allowed_dir else None,
             "max_file_size_mb": self.config.max_file_size_mb,
             "allowed_extensions": self.config.allowed_file_extensions
         }

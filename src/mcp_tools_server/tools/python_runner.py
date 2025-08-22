@@ -136,9 +136,9 @@ class PythonRunnerTool(BaseTool):
                         "error": f"Security validation failed for working directory: {str(e)}"
                     }
             else:
-                # Use first allowed directory as default working directory
-                if self.security_validator.allowed_dirs:
-                    work_dir = self.security_validator.allowed_dirs[0]
+                # Use allowed directory as default working directory
+                if self.security_validator.allowed_dir:
+                    work_dir = self.security_validator.allowed_dir
                 else:
                     work_dir = Path.cwd()
             

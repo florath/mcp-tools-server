@@ -5,9 +5,7 @@
         "debug": true
     },
     "security": {
-        "allowed_directories": [
-            "/tmp/Game-Of-Life"
-        ],
+        "allowed_directory": "/tmp/Game-Of-Life",
         "max_file_size_mb": 100,
         "allowed_file_extensions": [
             ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 

@@ -106,8 +106,7 @@ class PythonRunnerTool(BaseTool):
             script_file_path = None
             if script_path:
                 try:
-                    self.security_validator.validate_file_path(script_path)
-                    script_file_path = Path(script_path).resolve()
+                    script_file_path = self.security_validator.validate_file_path(script_path)
                     if not script_file_path.exists():
                         return {
                             "success": False,
@@ -123,8 +122,7 @@ class PythonRunnerTool(BaseTool):
             work_dir = None
             if working_directory:
                 try:
-                    self.security_validator.validate_directory_path_for_creation(working_directory)
-                    work_dir = Path(working_directory).resolve()
+                    work_dir = self.security_validator.validate_directory_path_for_creation(working_directory)
                     if not work_dir.exists():
                         return {
                             "success": False,

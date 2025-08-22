@@ -88,10 +88,9 @@ class FileFinderTool(BaseTool):
             # Determine search directories
             search_paths = []
             if search_directory:
-                # Validate the specific directory
+                # Validate the specific directory and get resolved path
                 try:
-                    self.security_validator.validate_directory_path_for_creation(search_directory)
-                    search_path = Path(search_directory).resolve()
+                    search_path = self.security_validator.validate_directory_path_for_creation(search_directory)
                     if search_path.exists() and search_path.is_dir():
                         search_paths.append(search_path)
                     else:

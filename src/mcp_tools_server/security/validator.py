@@ -24,8 +24,8 @@ class SecurityValidator:
     def validate_file_path(self, file_path: str) -> Path:
         """Validate file path against security policies."""
         try:
-            # Convert to Path and resolve
-            path = Path(file_path).resolve()
+            # Convert to Path and resolve (handle relative paths against allowed directory)
+            path = self._resolve_path(file_path)
             
             # Check if path exists
             if not path.exists():

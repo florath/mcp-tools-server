@@ -7,6 +7,7 @@ from ..core.config import Config
 from ..security.validator import SecurityValidator
 from .file_reader import FileReaderTool
 from .file_writer import FileWriterTool
+from .file_remover import FileRemoverTool
 from .python_linter import PythonLinterTool
 from .directory_manager import DirectoryManagerTool
 from .file_editor import FileEditorTool
@@ -47,6 +48,13 @@ class ToolRegistry:
                 security_validator=self.security_validator
             )
             logger.info("Loaded file_writer tool")
+        
+        # Load file_remover tool
+        if getattr(self.config.tools, 'file_remover', {}).get('enabled', True):
+            self.tools['file_remover'] = FileRemoverTool(
+                security_validator=self.security_validator
+            )
+            logger.info("Loaded file_remover tool")
         
         # Load python_linter tool
         if getattr(self.config.tools, 'python_linter', {}).get('enabled', True):

@@ -26,6 +26,9 @@
         "file_writer": {
             "enabled": true
         },
+        "file_remover": {
+            "enabled": true
+        },
         "python_linter": {
             "enabled": true,
             "timeout_seconds": 60

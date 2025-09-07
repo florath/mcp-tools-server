@@ -85,6 +85,7 @@ class FileFinderTool(BaseTool):
                     "error": "max_results must be between 1 and 1000"
                 }
             
+            
             # Determine search directories
             search_paths = []
             if search_directory:
@@ -104,15 +105,16 @@ class FileFinderTool(BaseTool):
                         "error": f"Security validation failed for search directory: {str(e)}"
                     }
             else:
-                # Use the allowed directory
-                allowed_dir = self.security_validator.allowed_dir
-                if not allowed_dir:
+                # Use the effective base directory (session directory if active, otherwise allowed directory)
+                effective_dir = self.security_validator.get_effective_base_directory()
+                
+                if not effective_dir:
                     return {
                         "success": False,
-                        "error": "No allowed directory configured and no search_directory specified"
+                        "error": "No effective base directory available and no search_directory specified"
                     }
-                if allowed_dir.exists() and allowed_dir.is_dir():
-                    search_paths = [allowed_dir]
+                if effective_dir.exists() and effective_dir.is_dir():
+                    search_paths = [effective_dir]
                 else:
                     search_paths = []
             
@@ -121,10 +123,13 @@ class FileFinderTool(BaseTool):
                 search_paths, pattern, file_type, recursive, case_sensitive, max_results
             )
             
+            # Format search directories as relative paths using helper function
+            formatted_search_dirs = [self._normalize_path_for_response(p) for p in search_paths]
+            
             return {
                 "success": True,
                 "pattern": pattern,
-                "search_directories": [str(p) for p in search_paths],
+                "search_directories": formatted_search_dirs,
                 "file_type": file_type,
                 "recursive": recursive,
                 "case_sensitive": case_sensitive,
@@ -179,12 +184,17 @@ class FileFinderTool(BaseTool):
                     if fnmatch.fnmatch(item_name, search_pattern):
                         try:
                             stat = item.stat()
+                            
+                            # Use helper function for consistent path normalization
+                            item_path = self._normalize_path_for_response(item)
+                            parent_path = self._normalize_path_for_response(item.parent) if item.parent else "."
+                            
                             result = {
-                                "path": str(item),
+                                "path": item_path,
                                 "name": item.name,
                                 "type": "directory" if item.is_dir() else "file",
                                 "size": stat.st_size if item.is_file() else None,
-                                "parent_directory": str(item.parent),
+                                "parent_directory": parent_path,
                                 "relative_path": str(item.relative_to(search_path))
                             }
                             results.append(result)

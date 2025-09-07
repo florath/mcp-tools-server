@@ -239,7 +239,7 @@ class FileEditorTool(BaseTool):
             return {
                 "success": True,
                 "message": f"Successfully edited lines {line_start}-{line_end or line_start}",
-                "file_path": str(path),
+                "file_path": self._normalize_path_for_response(path),
                 "operation": "edit",
                 "lines_affected": lines_affected,
                 "line_start": line_start,
@@ -291,7 +291,7 @@ class FileEditorTool(BaseTool):
             return {
                 "success": True,
                 "message": f"Successfully inserted content at line {line_number}",
-                "file_path": str(path),
+                "file_path": self._normalize_path_for_response(path),
                 "operation": "insert",
                 "insert_position": line_number,
                 "lines_inserted": len(new_lines),
@@ -364,7 +364,7 @@ class FileEditorTool(BaseTool):
             return {
                 "success": True,
                 "message": f"Successfully deleted lines {line_start}-{line_end or line_start}",
-                "file_path": str(path),
+                "file_path": self._normalize_path_for_response(path),
                 "operation": "delete",
                 "lines_deleted": lines_deleted,
                 "line_start": line_start,

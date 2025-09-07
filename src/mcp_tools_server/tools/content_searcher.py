@@ -169,7 +169,7 @@ class ContentSearcherTool(BaseTool):
             return {
                 "success": True,
                 "search_term": search_term,
-                "search_directories": [str(p) for p in search_paths],
+                "search_directories": [self._normalize_path_for_response(p) for p in search_paths],
                 "file_pattern": file_pattern,
                 "case_sensitive": case_sensitive,
                 "use_regex": use_regex,
@@ -220,7 +220,7 @@ class ContentSearcherTool(BaseTool):
                         file_size = file_path.stat().st_size
                         if file_size > max_file_size_bytes:
                             results.append({
-                                "file_path": str(file_path),
+                                "file_path": self._normalize_path_for_response(file_path),
                                 "relative_path": str(file_path.relative_to(search_path)),
                                 "matches": [],
                                 "error": f"File too large ({file_size / (1024*1024):.1f}MB, max: {max_file_size_mb}MB)",
@@ -287,7 +287,7 @@ class ContentSearcherTool(BaseTool):
                         encoding_used = "latin-1"
                 except Exception:
                     return {
-                        "file_path": str(file_path),
+                        "file_path": self._normalize_path_for_response(file_path),
                         "relative_path": str(file_path.relative_to(base_path)),
                         "matches": [],
                         "error": "Could not read file (encoding issues)",
@@ -341,7 +341,7 @@ class ContentSearcherTool(BaseTool):
                     matches.append(match_info)
             
             return {
-                "file_path": str(file_path),
+                "file_path": self._normalize_path_for_response(file_path),
                 "relative_path": str(file_path.relative_to(base_path)),
                 "matches": matches,
                 "encoding": encoding_used,
@@ -350,7 +350,7 @@ class ContentSearcherTool(BaseTool):
             
         except PermissionError:
             return {
-                "file_path": str(file_path),
+                "file_path": self._normalize_path_for_response(file_path),
                 "relative_path": str(file_path.relative_to(base_path)),
                 "matches": [],
                 "error": "Permission denied",
@@ -359,7 +359,7 @@ class ContentSearcherTool(BaseTool):
         except Exception as e:
             logger.error(f"Error searching in file {file_path}: {e}")
             return {
-                "file_path": str(file_path),
+                "file_path": self._normalize_path_for_response(file_path),
                 "relative_path": str(file_path.relative_to(base_path)),
                 "matches": [],
                 "error": str(e),

@@ -109,15 +109,15 @@ class DirectoryManagerTool(BaseTool):
                 if path.is_dir():
                     return {
                         "success": True,
-                        "message": f"Directory already exists: {path}",
-                        "directory_path": str(path),
+                        "message": f"Directory already exists: {self._normalize_path_for_response(path)}",
+                        "directory_path": self._normalize_path_for_response(path),
                         "operation": "create",
                         "already_existed": True
                     }
                 else:
                     return {
                         "success": False,
-                        "error": f"Path exists but is not a directory: {path}"
+                        "error": f"Path exists but is not a directory: {self._normalize_path_for_response(path)}"
                     }
             
             # Create the directory
@@ -130,8 +130,8 @@ class DirectoryManagerTool(BaseTool):
             
             return {
                 "success": True,
-                "message": f"Successfully created directory: {path}",
-                "directory_path": str(path),
+                "message": f"Successfully created directory: {self._normalize_path_for_response(path)}",
+                "directory_path": self._normalize_path_for_response(path),
                 "operation": "create",
                 "already_existed": False,
                 "created_parents": create_parents
@@ -140,12 +140,12 @@ class DirectoryManagerTool(BaseTool):
         except PermissionError:
             return {
                 "success": False,
-                "error": f"Permission denied creating directory: {path}"
+                "error": f"Permission denied creating directory: {self._normalize_path_for_response(path)}"
             }
         except FileExistsError:
             return {
                 "success": False,
-                "error": f"Parent directory does not exist and create_parents is False: {path}"
+                "error": f"Parent directory does not exist and create_parents is False: {self._normalize_path_for_response(path)}"
             }
         except Exception as e:
             return {
@@ -159,8 +159,8 @@ class DirectoryManagerTool(BaseTool):
             if not path.exists():
                 return {
                     "success": True,
-                    "message": f"Directory does not exist (already removed): {path}",
-                    "directory_path": str(path),
+                    "message": f"Directory does not exist (already removed): {self._normalize_path_for_response(path)}",
+                    "directory_path": self._normalize_path_for_response(path),
                     "operation": "remove",
                     "was_removed": False
                 }
@@ -168,7 +168,7 @@ class DirectoryManagerTool(BaseTool):
             if not path.is_dir():
                 return {
                     "success": False,
-                    "error": f"Path is not a directory: {path}"
+                    "error": f"Path is not a directory: {self._normalize_path_for_response(path)}"
                 }
             
             # Check if directory is empty
@@ -178,13 +178,13 @@ class DirectoryManagerTool(BaseTool):
             except PermissionError:
                 return {
                     "success": False,
-                    "error": f"Permission denied accessing directory: {path}"
+                    "error": f"Permission denied accessing directory: {self._normalize_path_for_response(path)}"
                 }
             
             if not is_empty and not force_remove:
                 return {
                     "success": False,
-                    "error": f"Directory is not empty. Use force_remove=true to remove non-empty directories: {path}",
+                    "error": f"Directory is not empty. Use force_remove=true to remove non-empty directories: {self._normalize_path_for_response(path)}",
                     "contents_count": len(contents)
                 }
             
@@ -198,8 +198,8 @@ class DirectoryManagerTool(BaseTool):
             
             return {
                 "success": True,
-                "message": f"Successfully removed directory: {path}",
-                "directory_path": str(path),
+                "message": f"Successfully removed directory: {self._normalize_path_for_response(path)}",
+                "directory_path": self._normalize_path_for_response(path),
                 "operation": "remove",
                 "was_removed": True,
                 "was_empty": is_empty
@@ -208,7 +208,7 @@ class DirectoryManagerTool(BaseTool):
         except PermissionError:
             return {
                 "success": False,
-                "error": f"Permission denied removing directory: {path}"
+                "error": f"Permission denied removing directory: {self._normalize_path_for_response(path)}"
             }
         except Exception as e:
             return {
@@ -222,13 +222,13 @@ class DirectoryManagerTool(BaseTool):
             if not path.exists():
                 return {
                     "success": False,
-                    "error": f"Directory does not exist: {path}"
+                    "error": f"Directory does not exist: {self._normalize_path_for_response(path)}"
                 }
             
             if not path.is_dir():
                 return {
                     "success": False,
-                    "error": f"Path is not a directory: {path}"
+                    "error": f"Path is not a directory: {self._normalize_path_for_response(path)}"
                 }
             
             # List contents
@@ -237,7 +237,7 @@ class DirectoryManagerTool(BaseTool):
                 for item in path.iterdir():
                     item_info = {
                         "name": item.name,
-                        "path": str(item),
+                        "path": self._normalize_path_for_response(item),
                         "type": "directory" if item.is_dir() else "file",
                         "size": item.stat().st_size if item.is_file() else None
                     }
@@ -245,7 +245,7 @@ class DirectoryManagerTool(BaseTool):
             except PermissionError:
                 return {
                     "success": False,
-                    "error": f"Permission denied listing directory: {path}"
+                    "error": f"Permission denied listing directory: {self._normalize_path_for_response(path)}"
                 }
             
             # Sort by type (directories first), then by name
@@ -253,8 +253,8 @@ class DirectoryManagerTool(BaseTool):
             
             return {
                 "success": True,
-                "message": f"Successfully listed directory: {path}",
-                "directory_path": str(path),
+                "message": f"Successfully listed directory: {self._normalize_path_for_response(path)}",
+                "directory_path": self._normalize_path_for_response(path),
                 "operation": "list",
                 "contents": contents,
                 "total_items": len(contents),

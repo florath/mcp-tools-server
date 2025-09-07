@@ -54,7 +54,7 @@ class FileRemoverTool(BaseTool):
             
             # Safety checks (unless force is True)
             if not force:
-                await self._perform_safety_checks(target_path)
+                await self._perform_safety_checks(target_path, file_path)
             
             backup_path = None
             # Create backup if requested
@@ -66,10 +66,10 @@ class FileRemoverTool(BaseTool):
             
             # Format response
             result = {
-                "file_path": str(target_path),
+                "file_path": self._normalize_path_for_response(target_path),
                 "size_bytes": file_size,
                 "backup_created": create_backup,
-                "backup_path": str(backup_path) if backup_path else None,
+                "backup_path": self._normalize_path_for_response(backup_path) if backup_path else None,
                 "force_used": force,
                 "timestamp": datetime.now().isoformat()
             }
@@ -84,18 +84,18 @@ class FileRemoverTool(BaseTool):
             logger.error(f"Error removing file {params.get('file_path')}: {e}")
             raise ValueError(f"File removal error: {e}")
     
-    async def _perform_safety_checks(self, file_path: Path) -> None:
+    async def _perform_safety_checks(self, target_path: Path, original_file_path: str) -> None:
         """Perform additional safety checks before removal."""
         # Check if file is read-only
-        if not os.access(file_path, os.W_OK):
-            raise ValueError(f"File is read-only and cannot be removed: {file_path}")
+        if not os.access(target_path, os.W_OK):
+            raise ValueError(f"File is read-only and cannot be removed: {original_file_path}")
         
         # Check if file is currently open/locked (basic check)
         try:
-            with open(file_path, 'r+b') as f:
+            with open(target_path, 'r+b') as f:
                 pass
         except PermissionError:
-            raise ValueError(f"File appears to be in use and cannot be removed: {file_path}")
+            raise ValueError(f"File appears to be in use and cannot be removed: {original_file_path}")
     
     async def _create_backup(self, file_path: Path) -> Path:
         """Create a backup of the file before removal."""

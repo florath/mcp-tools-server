@@ -48,7 +48,7 @@ class FileReaderTool(BaseTool):
             
             # Format response
             result = {
-                "file_path": str(validated_path),
+                "file_path": self._normalize_path_for_response(validated_path),
                 "encoding": encoding,
                 "size_bytes": validated_path.stat().st_size,
                 "content": content

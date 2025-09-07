@@ -20,6 +20,15 @@ class SecurityValidator:
         self.config = security_config
         self.allowed_dir = Path(security_config.allowed_directory).resolve() if security_config.allowed_directory else None
         self.max_file_size_bytes = security_config.max_file_size_mb * 1024 * 1024
+        self._session_directory: Optional[Path] = None
+    
+    def set_session_directory(self, session_directory: Optional[Path]) -> None:
+        """Set session directory for current request context."""
+        self._session_directory = session_directory
+    
+    def get_effective_base_directory(self) -> Optional[Path]:
+        """Get the effective base directory (session dir if available, otherwise allowed dir)."""
+        return self._session_directory or self.allowed_dir
     
     def validate_file_path(self, file_path: str) -> Path:
         """Validate file path against security policies."""
@@ -104,16 +113,17 @@ class SecurityValidator:
             raise SecurityError(f"Filename validation error: {e}")
     
     def _is_path_allowed(self, path: Path) -> bool:
-        """Check if path is within the allowed directory."""
-        if not self.allowed_dir:
+        """Check if path is within the effective base directory."""
+        base_dir = self.get_effective_base_directory()
+        if not base_dir:
             return True  # No restrictions if no directory specified
         
         try:
-            return path.is_relative_to(self.allowed_dir)
+            return path.is_relative_to(base_dir)
         except ValueError:
             # is_relative_to can raise ValueError on different filesystems
             # Fallback to string comparison for edge cases
-            return str(path).startswith(str(self.allowed_dir))
+            return str(path).startswith(str(base_dir))
         
         return False
     
@@ -142,21 +152,22 @@ class SecurityValidator:
             raise SecurityError(f"Directory path validation error: {e}")
     
     def _resolve_path(self, path_str: str) -> Path:
-        """Resolve path, handling relative paths against the allowed directory."""
+        """Resolve path, handling relative paths against the effective base directory."""
         path = Path(path_str)
         
         # If it's already absolute, just resolve it
         if path.is_absolute():
             return path.resolve()
         
-        # For relative paths, resolve against the allowed directory if it exists
-        if self.allowed_dir:
-            candidate_path = (self.allowed_dir / path).resolve()
-            # Always return the candidate path when we have an allowed directory
+        # For relative paths, resolve against the effective base directory
+        base_dir = self.get_effective_base_directory()
+        if base_dir:
+            candidate_path = (base_dir / path).resolve()
+            # Always return the candidate path when we have a base directory
             # The path validation will handle security checks
             return candidate_path
         
-        # If no allowed directory, resolve normally (will likely fail security check)
+        # If no base directory, resolve normally (will likely fail security check)
         return path.resolve()
     
     def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:
@@ -169,8 +180,11 @@ class SecurityValidator:
     
     def get_security_info(self) -> dict:
         """Get current security configuration info."""
+        base_dir = self.get_effective_base_directory()
         return {
             "allowed_directory": str(self.allowed_dir) if self.allowed_dir else None,
+            "session_directory": str(self._session_directory) if self._session_directory else None,
+            "effective_base_directory": str(base_dir) if base_dir else None,
             "max_file_size_mb": self.config.max_file_size_mb,
             "allowed_extensions": self.config.allowed_file_extensions
         }

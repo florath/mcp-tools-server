@@ -5,7 +5,7 @@
         "debug": true
     },
     "security": {
-        "allowed_directory": "/tmp/Game-Of-Life",
+        "allowed_directory": "/home/florath/devel/REP/requirements-evolution-platform",
         "max_file_size_mb": 100,
         "allowed_file_extensions": [
             ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
@@ -13,6 +13,10 @@
             ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile", 
             ".dockerignore", ".gitignore", ".env", ".lock"
         ]
+    },
+    "sessions": {
+        "timeout_seconds": 3600,
+        "max_sessions": 100
     },
     "logging": {
         "level": "INFO",

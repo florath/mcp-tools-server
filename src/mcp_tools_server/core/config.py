@@ -26,6 +26,12 @@ class LoggingConfig(BaseModel):
     format: str = "json"
 
 
+class SessionsConfig(BaseModel):
+    """Sessions configuration."""
+    timeout_seconds: int = 3600  # 1 hour default
+    max_sessions: int = 100
+
+
 class ToolsConfig(BaseModel):
     """Tools configuration."""
     file_reader: Dict[str, Any] = Field(default_factory=dict)
@@ -43,6 +49,7 @@ class Config(BaseModel):
     server: ServerConfig = Field(default_factory=ServerConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    sessions: SessionsConfig = Field(default_factory=SessionsConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
 
 

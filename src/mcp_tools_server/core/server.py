@@ -8,11 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Config
 from .session import SessionManager
+from .structured_logger import logger
 from ..security.validator import SecurityValidator
 from ..tools.registry import ToolRegistry
-
-
-logger = logging.getLogger(__name__)
 
 
 class MCPToolsServer:
@@ -305,14 +303,27 @@ class MCPToolsServer:
                 if params is None:
                     params = await request.json()
                 
+                # Extract session ID from headers
+                session_id = request.headers.get("X-MCP-Session-ID")
+                
+                # Debug logging: log complete request
+                logger.debug(f"Tool {tool_name} request", 
+                           tool_name=tool_name, 
+                           operation="tool_request",
+                           params=params,
+                           session_id=session_id)
+                
                 # Extract and validate reason field
                 reason = params.get("reason", "")
                 if not reason or len(reason.strip()) < 10:
                     raise ValueError(f"Tool call missing or insufficient reason. Please provide a clear explanation (at least 10 characters) of why you need to use the {tool_name} tool.")
                 
                 # Log tool usage with reason
-                logger.info(f"Tool {tool_name} called with reason: {reason}")
-                logger.debug(f"Tool {tool_name} parameters: {params}")
+                # Tool call logging is now handled by individual tools in their execute method
+                
+                # Set session ID on tool for logging
+                if hasattr(tool_instance, 'set_session_id') and session_id:
+                    tool_instance.set_session_id(session_id)
                 
                 # Execute tool (reason is included in params but tools can ignore it)
                 result = await tool_instance.execute(params)
@@ -323,9 +334,12 @@ class MCPToolsServer:
                     "result": result
                 }
                 
-                # Log first 500 characters of response
-                response_str = str(response)
-                logger.info(f"Response for {tool_name} (first 500 chars): {response_str[:500]}")
+                # Debug logging: log complete response
+                logger.debug(f"Tool {tool_name} response",
+                           tool_name=tool_name,
+                           operation="tool_response", 
+                           result=response,
+                           session_id=session_id)
                 
                 return response
                 

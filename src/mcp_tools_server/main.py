@@ -7,28 +7,25 @@ import sys
 from pathlib import Path
 
 import uvicorn
-from pythonjsonlogger import jsonlogger
 
 from .core.config import load_config
 from .core.server import MCPToolsServer
+from .core.structured_logger import logger
 
 
 def setup_logging(config):
     """Setup logging configuration."""
     log_level = getattr(logging, config.logging.level.upper(), logging.INFO)
     
-    if config.logging.format == "json":
-        logHandler = logging.StreamHandler()
-        formatter = jsonlogger.JsonFormatter()
-        logHandler.setFormatter(formatter)
-        logger = logging.getLogger()
-        logger.addHandler(logHandler)
-        logger.setLevel(log_level)
-    else:
-        logging.basicConfig(
-            level=log_level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+    # Set log level on our structured logger
+    logger.logger.setLevel(log_level)
+    
+    # Configure uvicorn logging to use our structured format
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_logger.setLevel(logging.WARNING)  # Reduce uvicorn noise
+    
+    uvicorn_access = logging.getLogger("uvicorn.access")
+    uvicorn_access.setLevel(logging.WARNING)  # Reduce access log noise
 
 
 def main():
@@ -52,6 +49,11 @@ def main():
         "--allowed-directory",
         help="Override allowed directory from config"
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Override log level (DEBUG, INFO, WARNING, ERROR)"
+    )
     
     args = parser.parse_args()
     
@@ -69,26 +71,27 @@ def main():
         config.server.port = args.port
     if args.allowed_directory:
         config.security.allowed_directory = args.allowed_directory
+    if args.log_level:
+        config.logging.level = args.log_level
     
     # Setup logging
     setup_logging(config)
-    logger = logging.getLogger(__name__)
     
-    logger.info(f"Starting MCP Tools Server on {config.server.host}:{config.server.port}")
-    logger.info(f"Security: allowed directory = {config.security.allowed_directory or 'unrestricted'}")
+    logger.server_event(f"Starting MCP Tools Server on {config.server.host}:{config.server.port}")
+    logger.server_event(f"Security: allowed directory = {config.security.allowed_directory or 'unrestricted'}")
     
     # Create server
     try:
         mcp_server = MCPToolsServer(config)
-        logger.info(f"Server created successfully")
+        logger.server_event(f"Server created successfully")
         
         # Run server
         uvicorn.run(
             mcp_server.app,
             host=config.server.host,
             port=config.server.port,
-            log_level="debug" if config.server.debug else "info",
-            access_log=True
+            log_level="warning",  # Reduce uvicorn noise
+            access_log=False  # Disable access logs to avoid mixed formats
         )
     except Exception as e:
         logger.error(f"Failed to start server: {e}")

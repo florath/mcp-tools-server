@@ -28,7 +28,8 @@ class PythonLinterTool(BaseTool):
         
         # Check available linters
         self.available_linters = self._check_available_linters()
-        logger.info(f"Available linters: {list(self.available_linters.keys())}")
+        from ..core.structured_logger import logger as struct_logger
+        struct_logger.server_event(f"Available linters: {list(self.available_linters.keys())}")
     
     def _check_available_linters(self) -> Dict[str, str]:
         """Check which linters are available in the system."""
@@ -188,7 +189,7 @@ class PythonLinterTool(BaseTool):
             
             return {
                 "success": True,
-                "file_path": file_path,
+                "file_path": self._normalize_path_for_response(Path(file_path)),
                 "linter_type": linter_type,
                 "results": results
             }

@@ -1,16 +1,13 @@
 """File writer tool for creating and writing files with security validation."""
 
 import asyncio
-import logging
+import time
 from typing import Dict, Any, Optional
 from pathlib import Path
 import aiofiles
 
 from .base import BaseTool
 from ..security.validator import SecurityError
-
-
-logger = logging.getLogger(__name__)
 
 
 class FileWriterTool(BaseTool):
@@ -25,7 +22,12 @@ class FileWriterTool(BaseTool):
     
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute file writing with parameters."""
+        start_time = time.time()
+        
         try:
+            # Log complete tool call with all parameters
+            self.log_tool_call(params)
+            
             # Extract parameters
             file_path = params.get('file_path')
             content = params.get('content', '')
@@ -42,7 +44,10 @@ class FileWriterTool(BaseTool):
                 
                 # Validate the parent directory is allowed (for creation)
                 parent_dir = target_path.parent
-                self.security_validator.validate_directory_path_for_creation(str(parent_dir))
+                # Use the original relative path for validation, not the resolved absolute path
+                original_parent = str(Path(file_path).parent)
+                if original_parent and original_parent != '.':
+                    self.security_validator.validate_directory_path_for_creation(original_parent)
                 
                 # Validate filename
                 self.security_validator.validate_filename(target_path.name)
@@ -53,11 +58,26 @@ class FileWriterTool(BaseTool):
             else:
                 target_path = Path(file_path)
             
-            logger.info(f"Writing file: {target_path}")
-            
             # Create parent directories if needed and allowed
             if create_dirs and not parent_dir.exists():
-                logger.info(f"Creating parent directories: {parent_dir}")
+                
+                # Additional security check: ensure parent directory creation
+                # doesn't escape the session directory
+                if self.security_validator and hasattr(self.security_validator, '_session_directory'):
+                    session_dir = self.security_validator._session_directory
+                    if session_dir:
+                        try:
+                            if not parent_dir.is_relative_to(session_dir):
+                                raise SecurityError(
+                                    "Cannot create directory outside session directory"
+                                )
+                        except ValueError:
+                            # Fallback for different filesystems
+                            if not str(parent_dir).startswith(str(session_dir)):
+                                raise SecurityError(
+                                    "Cannot create directory outside session directory"
+                                )
+                
                 parent_dir.mkdir(parents=True, exist_ok=True)
             
             # Write file content
@@ -68,7 +88,7 @@ class FileWriterTool(BaseTool):
             
             # Format response
             result = {
-                "file_path": str(target_path),
+                "file_path": self._normalize_path_for_response(target_path),
                 "content_length": len(content),
                 "encoding": encoding,
                 "size_bytes": file_stats.st_size,
@@ -76,13 +96,23 @@ class FileWriterTool(BaseTool):
                 "operation": "created" if not target_path.exists() else "overwritten"
             }
             
+            # Log successful result
+            duration_ms = (time.time() - start_time) * 1000
+            self.log_tool_result(result, duration_ms)
+            
             return result
             
         except SecurityError as e:
-            logger.warning(f"Security error writing file: {e}")
+            self.log_security_violation(
+                violation_type=str(e),
+                details={
+                    "attempted_file_path": params.get('file_path'),
+                    "reason": params.get('reason', 'No reason provided')
+                }
+            )
             raise ValueError(f"Security error: {e}")
         except Exception as e:
-            logger.error(f"Error writing file {params.get('file_path')}: {e}")
+            self.log_tool_error(str(e), params)
             raise ValueError(f"File writing error: {e}")
     
     async def _write_file(self, file_path: Path, content: str, encoding: str) -> None:

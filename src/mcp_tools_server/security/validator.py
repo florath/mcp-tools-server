@@ -1,11 +1,15 @@
 """Security validator for file operations and path validation."""
 
+import logging
 import os
 from pathlib import Path
 from typing import List, Optional
 from pathvalidate import validate_filename
 
 from ..core.config import SecurityConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 class SecurityError(Exception):
@@ -38,15 +42,18 @@ class SecurityValidator:
             
             # Check if path exists
             if not path.exists():
-                raise SecurityError(f"File does not exist: {file_path}")
+                logger.warning(f"File '{file_path}' does not exist{self._get_context_info()}{self._get_available_directories_info()}")
+                raise SecurityError(f"File '{file_path}' does not exist")
             
             # Check if it's a file (not directory)
             if not path.is_file():
-                raise SecurityError(f"Path is not a file: {file_path}")
+                logger.warning(f"Path '{file_path}' is not a file{self._get_context_info()}")
+                raise SecurityError(f"Path '{file_path}' is not a file")
             
             # Check if path is within allowed directories
             if not self._is_path_allowed(path):
-                raise SecurityError(f"File path not in allowed directories: {file_path}")
+                logger.warning(f"File '{file_path}' is not in allowed directories{self._get_context_info()}")
+                raise SecurityError(f"File '{file_path}' is not in allowed directories")
             
             # Check file extension
             if not self._is_extension_allowed(path):
@@ -71,15 +78,18 @@ class SecurityValidator:
             
             # Check if path exists
             if not path.exists():
-                raise SecurityError(f"Directory does not exist: {dir_path}")
+                logger.warning(f"Directory '{dir_path}' does not exist{self._get_context_info()}{self._get_available_directories_info()}")
+                raise SecurityError(f"Directory '{dir_path}' does not exist")
             
             # Check if it's a directory
             if not path.is_dir():
-                raise SecurityError(f"Path is not a directory: {dir_path}")
+                logger.warning(f"Path '{dir_path}' is not a directory{self._get_context_info()}")
+                raise SecurityError(f"Path '{dir_path}' is not a directory")
             
             # Check if path is within allowed directories
             if not self._is_path_allowed(path):
-                raise SecurityError(f"Directory path not in allowed directories: {dir_path}")
+                logger.warning(f"Directory '{dir_path}' is not in allowed directories{self._get_context_info()}")
+                raise SecurityError(f"Directory '{dir_path}' is not in allowed directories")
             
             return path
             
@@ -114,6 +124,16 @@ class SecurityValidator:
     
     def _is_path_allowed(self, path: Path) -> bool:
         """Check if path is within the effective base directory."""
+        # CRITICAL: When session is active, ONLY allow paths within session directory
+        # This enforces strict session boundary isolation
+        if self._session_directory:
+            try:
+                return path.is_relative_to(self._session_directory)
+            except ValueError:
+                # Fallback to string comparison for edge cases
+                return str(path).startswith(str(self._session_directory))
+        
+        # If no session, fall back to allowed directory check
         base_dir = self.get_effective_base_directory()
         if not base_dir:
             return True  # No restrictions if no directory specified
@@ -142,7 +162,8 @@ class SecurityValidator:
             
             # Check if path is within allowed directories
             if not self._is_path_allowed(path):
-                raise SecurityError(f"Directory path not in allowed directories: {dir_path}")
+                logger.warning(f"Directory '{dir_path}' is not in allowed directories{self._get_context_info()}")
+                raise SecurityError(f"Directory '{dir_path}' is not in allowed directories")
             
             return path
             
@@ -159,7 +180,7 @@ class SecurityValidator:
         # This prevents tools from accessing files outside the session directory
         if path.is_absolute():
             raise SecurityError(
-                f"Absolute paths are not allowed for security reasons. Use relative paths only: {path_str}"
+                "Absolute paths are not allowed for security reasons. Use relative paths only."
             )
         
         # For relative paths, resolve against the effective base directory
@@ -167,25 +188,26 @@ class SecurityValidator:
         if base_dir:
             candidate_path = (base_dir / path).resolve()
             
+            
             # CRITICAL FIX: Ensure the resolved path is still within the session directory
             # This prevents directory creation outside the session when using parents=True
             if self._session_directory:
                 try:
                     if not candidate_path.is_relative_to(self._session_directory):
                         raise SecurityError(
-                            f"Resolved path {candidate_path} would be outside session directory {self._session_directory}"
+                            "Resolved path would be outside session directory"
                         )
                 except ValueError:
                     # Fallback for different filesystems
                     if not str(candidate_path).startswith(str(self._session_directory)):
                         raise SecurityError(
-                            f"Resolved path {candidate_path} would be outside session directory {self._session_directory}"
+                            "Resolved path would be outside session directory"
                         )
             
             return candidate_path
         
         # If no base directory, we can't resolve relative paths safely
-        raise SecurityError(f"No session directory available to resolve relative path: {path_str}")
+        raise SecurityError("No session directory available to resolve relative path")
     
     def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:
         """Check if path is within a specific allowed directory (without looping through all)."""
@@ -205,3 +227,17 @@ class SecurityValidator:
             "max_file_size_mb": self.config.max_file_size_mb,
             "allowed_extensions": self.config.allowed_file_extensions
         }
+    
+    def _get_context_info(self) -> str:
+        """Get context information for error messages."""
+        base_dir = self.get_effective_base_directory()
+        if base_dir:
+            # Only show the last part of the path to avoid exposing absolute paths
+            dir_name = base_dir.name
+            return f" in session directory '{dir_name}'"
+        return ""
+    
+    def _get_available_directories_info(self) -> str:
+        """Get information about available directories for error messages."""
+        # Removed confusing directory listing - not helpful for users
+        return ""

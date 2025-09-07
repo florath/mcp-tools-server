@@ -134,9 +134,16 @@ class MCPToolsServer:
                 if params is None:
                     params = await request.json()
                 
-                logger.info(f"Tool {tool_name} called with params: {params}")
+                # Extract and validate reason field
+                reason = params.get("reason", "")
+                if not reason or len(reason.strip()) < 10:
+                    raise ValueError(f"Tool call missing or insufficient reason. Please provide a clear explanation (at least 10 characters) of why you need to use the {tool_name} tool.")
                 
-                # Execute tool
+                # Log tool usage with reason
+                logger.info(f"Tool {tool_name} called with reason: {reason}")
+                logger.debug(f"Tool {tool_name} parameters: {params}")
+                
+                # Execute tool (reason is included in params but tools can ignore it)
                 result = await tool_instance.execute(params)
                 
                 response = {
@@ -154,19 +161,24 @@ class MCPToolsServer:
             except ValueError as e:
                 # Handle client errors (invalid parameters, security violations)
                 error_msg = str(e)
+                
+                # Extract clean error message for LLM while logging full details
+                clean_error, error_details = self._extract_clean_error_message(error_msg)
+                
                 if "Security error" in error_msg:
                     status_code = 403  # Forbidden
-                    logger.warning(f"Security violation in tool {tool_name}: {e}")
+                    logger.warning(f"Security violation in tool {tool_name}: {error_details}")
                 else:
                     status_code = 400  # Bad Request
-                    logger.warning(f"Client error in tool {tool_name}: {e}")
+                    logger.warning(f"Client error in tool {tool_name}: {error_details}")
                 
                 return JSONResponse(
                     status_code=status_code,
                     content={
                         "success": False,
                         "tool": tool_name,
-                        "error": error_msg
+                        "error": clean_error,
+                        "details": error_details  # Full details for debugging
                     }
                 )
             except Exception as e:
@@ -212,6 +224,72 @@ class MCPToolsServer:
                     example[prop_name] = []
         
         return example
+    
+    def _extract_clean_error_message(self, error_msg: str) -> tuple[str, str]:
+        """
+        Extract clean LLM-friendly error message and detailed error for logging.
+        
+        Args:
+            error_msg: Raw error message from tool execution
+            
+        Returns:
+            Tuple of (clean_message_for_llm, detailed_message_for_logs)
+        """
+        # Extract the core error message by removing wrapper prefixes
+        clean_msg = error_msg
+        
+        # Remove "Security error: " prefix but keep the actual error
+        if clean_msg.startswith("Security error: "):
+            clean_msg = clean_msg[16:]
+        
+        # Remove "File reading error: " prefix
+        if clean_msg.startswith("File reading error: "):
+            clean_msg = clean_msg[20:]
+            
+        # Remove "Path validation error: " prefix
+        if clean_msg.startswith("Path validation error: "):
+            clean_msg = clean_msg[24:]
+            
+        # Remove other common prefixes that add noise
+        prefixes_to_remove = [
+            "Filename validation error: ",
+            "Directory validation error: ",
+            "Directory path validation error: "
+        ]
+        
+        for prefix in prefixes_to_remove:
+            if clean_msg.startswith(prefix):
+                clean_msg = clean_msg[len(prefix):]
+                break
+        
+        # Common error message improvements for LLM clarity
+        error_mappings = {
+            # File/directory not found
+            r"File does not exist: (.+)": r"File not found: \1",
+            r"Directory does not exist: (.+)": r"Directory not found: \1", 
+            
+            # Path issues
+            r"Path is not a file: (.+)": r"Path is a directory, not a file: \1",
+            r"Path is not a directory: (.+)": r"Path is a file, not a directory: \1",
+            
+            # Permission issues
+            r"File path not in allowed directories: (.+)": r"Access denied: \1 is outside allowed directory",
+            r"Directory path not in allowed directories: (.+)": r"Access denied: \1 is outside allowed directory",
+            
+            # File size/extension issues
+            r"File too large: (\d+) bytes": r"File too large (exceeds size limit)",
+            r"File extension not allowed: (.+)": r"File type not allowed: \1",
+            
+            # Generic security issues
+            r"Hidden files not allowed": r"Cannot access hidden files",
+            r"Path traversal not allowed": r"Invalid path (contains '..')"
+        }
+        
+        import re
+        for pattern, replacement in error_mappings.items():
+            clean_msg = re.sub(pattern, replacement, clean_msg)
+        
+        return clean_msg.strip(), error_msg
     
     def _setup_exception_handlers(self):
         """Setup global exception handlers."""

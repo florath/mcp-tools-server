@@ -155,20 +155,37 @@ class SecurityValidator:
         """Resolve path, handling relative paths against the effective base directory."""
         path = Path(path_str)
         
-        # If it's already absolute, just resolve it
+        # SECURITY: Reject absolute paths to enforce session isolation
+        # This prevents tools from accessing files outside the session directory
         if path.is_absolute():
-            return path.resolve()
+            raise SecurityError(
+                f"Absolute paths are not allowed for security reasons. Use relative paths only: {path_str}"
+            )
         
         # For relative paths, resolve against the effective base directory
         base_dir = self.get_effective_base_directory()
         if base_dir:
             candidate_path = (base_dir / path).resolve()
-            # Always return the candidate path when we have a base directory
-            # The path validation will handle security checks
+            
+            # CRITICAL FIX: Ensure the resolved path is still within the session directory
+            # This prevents directory creation outside the session when using parents=True
+            if self._session_directory:
+                try:
+                    if not candidate_path.is_relative_to(self._session_directory):
+                        raise SecurityError(
+                            f"Resolved path {candidate_path} would be outside session directory {self._session_directory}"
+                        )
+                except ValueError:
+                    # Fallback for different filesystems
+                    if not str(candidate_path).startswith(str(self._session_directory)):
+                        raise SecurityError(
+                            f"Resolved path {candidate_path} would be outside session directory {self._session_directory}"
+                        )
+            
             return candidate_path
         
-        # If no base directory, resolve normally (will likely fail security check)
-        return path.resolve()
+        # If no base directory, we can't resolve relative paths safely
+        raise SecurityError(f"No session directory available to resolve relative path: {path_str}")
     
     def _is_path_allowed_raw(self, path: Path, allowed_dir: Path) -> bool:
         """Check if path is within a specific allowed directory (without looping through all)."""

@@ -9,6 +9,7 @@ from ..security.validator import SecurityValidator
 from .file_reader import FileReaderTool
 from .file_writer import FileWriterTool
 from .file_remover import FileRemoverTool
+from .file_mover import FileMoverTool
 from .python_linter import PythonLinterTool
 from .directory_manager import DirectoryManagerTool
 from .file_editor import FileEditorTool
@@ -55,6 +56,13 @@ class ToolRegistry:
                 security_validator=self.security_validator
             )
             logger.server_event("Loaded file_remover tool")
+        
+        # Load file_mover tool
+        if getattr(self.config.tools, 'file_mover', {}).get('enabled', True):
+            self.tools['file_mover'] = FileMoverTool(
+                security_validator=self.security_validator
+            )
+            logger.server_event("Loaded file_mover tool")
         
         # Load python_linter tool
         if getattr(self.config.tools, 'python_linter', {}).get('enabled', True):

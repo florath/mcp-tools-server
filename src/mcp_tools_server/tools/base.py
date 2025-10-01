@@ -74,36 +74,49 @@ class BaseTool(ABC):
             session_id=self._current_session_id
         )
     
-    def get_info(self) -> Dict[str, Any]:
-        """Get tool information."""
-        schema = self.get_parameters_schema()
-        
-        # Add reason field to all tool schemas to enforce thoughtful usage
-        if "properties" not in schema:
-            schema["properties"] = {}
-        
-        schema["properties"]["reason"] = {
-            "type": "string",
-            "description": "Clear explanation of why you need to use this tool and what you hope to accomplish",
-            "minLength": 10
-        }
-        
-        # Add reason to required fields
-        if "required" not in schema:
-            schema["required"] = []
-        if "reason" not in schema["required"]:
-            schema["required"].append("reason")
-        
-        return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": schema
-        }
-    
     @abstractmethod
     def get_parameters_schema(self) -> Dict[str, Any]:
         """Get parameters schema for the tool."""
         pass
+
+    def get_openai_function_schema(self) -> Dict[str, Any]:
+        """
+        Get tool schema in OpenAI function calling format.
+
+        Converts MCP tool schema to OpenAI-compatible function schema
+        for use with vLLM native tool calling.
+
+        Returns:
+            Dict containing OpenAI function schema with type, name, description, and parameters
+        """
+        # Get base parameters schema
+        parameters_schema = self.get_parameters_schema().copy()
+
+        # Add reason field to all tool schemas to enforce thoughtful usage
+        if "properties" not in parameters_schema:
+            parameters_schema["properties"] = {}
+
+        parameters_schema["properties"]["reason"] = {
+            "type": "string",
+            "description": "MANDATORY: Clear explanation of why you need to use this tool (minimum 10 characters). Tool calls without proper reason will be rejected immediately.",
+            "minLength": 10
+        }
+
+        # Add reason to required fields
+        if "required" not in parameters_schema:
+            parameters_schema["required"] = []
+        if "reason" not in parameters_schema["required"]:
+            parameters_schema["required"].append("reason")
+
+        # Return OpenAI function calling format
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": parameters_schema
+            }
+        }
     
     def _normalize_path_for_response(self, path: Path) -> str:
         """

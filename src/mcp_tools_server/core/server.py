@@ -113,43 +113,43 @@ class MCPToolsServer:
         
         @self.app.get("/tools/{tool_name}/schema")
         async def get_tool_schema(tool_name: str):
-            """Get detailed schema for a specific tool."""
+            """Get schema for a specific tool (MCP client format for backward compatibility)."""
             tool_instance = self.tool_registry.get_tool(tool_name)
             if not tool_instance:
                 raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
-            
+
+            # Return in the format expected by MCP client (backward compat)
+            openai_schema = tool_instance.get_openai_function_schema()
+            function_data = openai_schema["function"]
+
             return {
-                "tool_name": tool_name,
-                "description": tool_instance.description,
+                "tool_name": function_data["name"],
+                "description": function_data["description"],
                 "endpoint": f"/{tool_name}/v1",
                 "method": "POST",
-                "parameters_schema": tool_instance.get_parameters_schema(),
+                "parameters_schema": function_data["parameters"],
                 "example_request": self._get_example_request(tool_name, tool_instance),
-                "security_info": self.security_validator.get_security_info() if hasattr(self, 'security_validator') else None
             }
-        
+
         @self.app.get("/tools/schemas")
-        async def get_all_tool_schemas():
-            """Get schemas for all tools (convenient for LLMs)."""
-            schemas = {}
+        async def get_openai_tool_schemas():
+            """
+            Get tool schemas in OpenAI function calling format.
+
+            Returns schemas compatible with vLLM native tool calling API.
+            Each tool is represented as a function with JSON schema parameters.
+            """
+            tools = []
             for name, tool_instance in self.tool_registry.tools.items():
-                schemas[name] = {
-                    "description": tool_instance.description,
-                    "endpoint": f"/{name}/v1",
-                    "method": "POST",
-                    "parameters_schema": tool_instance.get_parameters_schema(),
-                    "example_request": self._get_example_request(name, tool_instance)
-                }
-            
+                tools.append(tool_instance.get_openai_function_schema())
+
             return {
-                "schemas": schemas,
-                "server_info": {
-                    "base_url": f"http://{self.config.server.host}:{self.config.server.port}",
-                    "security_info": self.security_validator.get_security_info()
-                },
-                "usage_instructions": "Send POST requests to the tool endpoints with JSON parameters matching the schema"
+                "tools": tools,
+                "total_count": len(tools),
+                "format": "openai_function_calling",
+                "usage": "Pass the 'tools' array to vLLM /v1/chat/completions endpoint with tool_choice parameter"
             }
-        
+
         # Register session management routes
         self._setup_session_routes()
         

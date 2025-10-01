@@ -84,32 +84,6 @@ class PythonLinterTool(BaseTool):
     def get_parameters_schema(self) -> Dict[str, Any]:
         """Get parameters schema for the tool."""
         return {
-            "file_path": {
-                "type": "string",
-                "description": "Path to Python file or directory to lint",
-                "required": True
-            },
-            "linter_type": {
-                "type": "string", 
-                "description": "Linter to use: 'ruff', 'mypy', 'bandit', or 'all'",
-                "default": "ruff",
-                "enum": ["ruff", "mypy", "bandit", "all"]
-            },
-            "fix_issues": {
-                "type": "boolean",
-                "description": "Auto-fix issues (only supported by Ruff)",
-                "default": False
-            },
-            "config_file": {
-                "type": "string",
-                "description": "Optional path to configuration file",
-                "required": False
-            }
-        }
-
-    def get_schema(self) -> Dict[str, Any]:
-        """Get JSON schema for the tool."""
-        return {
             "type": "object",
             "properties": {
                 "file_path": {
@@ -117,24 +91,25 @@ class PythonLinterTool(BaseTool):
                     "description": "Path to Python file or directory to lint"
                 },
                 "linter_type": {
-                    "type": "string",
-                    "enum": ["ruff", "mypy", "bandit", "all"],
+                    "type": "string", 
+                    "description": "Linter to use: 'ruff', 'mypy', 'bandit', or 'all'",
                     "default": "ruff",
-                    "description": "Linter to use"
+                    "enum": ["ruff", "mypy", "bandit", "all"]
                 },
                 "fix_issues": {
-                    "type": "boolean", 
-                    "default": False,
-                    "description": "Auto-fix issues (Ruff only)"
+                    "type": "boolean",
+                    "description": "Auto-fix issues (only supported by Ruff)",
+                    "default": False
                 },
                 "config_file": {
                     "type": "string",
-                    "description": "Optional configuration file path"
+                    "description": "Optional path to configuration file"
                 }
             },
             "required": ["file_path"],
             "additionalProperties": False
         }
+
     
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the python linter tool."""

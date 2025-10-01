@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class DirectoryManagerTool(BaseTool):
-    """Tool for managing directories - create, remove, and list operations."""
-    
+    """Tool for managing directories - create, remove, list, and check existence operations."""
+
     def __init__(self, security_validator: SecurityValidator):
         super().__init__(
             name="directory_manager",
-            description="Create, remove, and list directories with security validation",
+            description="Create, remove, list, and check existence of directories with security validation",
             security_validator=security_validator
         )
     
@@ -30,8 +30,8 @@ class DirectoryManagerTool(BaseTool):
             "properties": {
                 "operation": {
                     "type": "string",
-                    "description": "Operation to perform: 'create', 'remove', or 'list'",
-                    "enum": ["create", "remove", "list"]
+                    "description": "Operation to perform: 'create', 'remove', 'list', or 'check_exists'",
+                    "enum": ["create", "remove", "list", "check_exists"]
                 },
                 "directory_path": {
                     "type": "string", 
@@ -73,7 +73,8 @@ class DirectoryManagerTool(BaseTool):
             
             # Security validation and path resolution
             try:
-                if operation == "create":
+                if operation in ("create", "check_exists"):
+                    # Allow non-existing paths for create and check_exists operations
                     path = self.security_validator.validate_directory_path_for_creation(directory_path)
                 else:
                     path = self.security_validator.validate_directory_path(directory_path)
@@ -89,10 +90,12 @@ class DirectoryManagerTool(BaseTool):
                 return await self._remove_directory(path, force_remove)
             elif operation == "list":
                 return await self._list_directory(path)
+            elif operation == "check_exists":
+                return await self._check_exists(path)
             else:
                 return {
                     "success": False,
-                    "error": f"Unknown operation: {operation}. Must be 'create', 'remove', or 'list'"
+                    "error": f"Unknown operation: {operation}. Must be 'create', 'remove', 'list', or 'check_exists'"
                 }
                 
         except Exception as e:
@@ -266,4 +269,29 @@ class DirectoryManagerTool(BaseTool):
             return {
                 "success": False,
                 "error": f"Failed to list directory: {str(e)}"
+            }
+
+    async def _check_exists(self, path: Path) -> Dict[str, Any]:
+        """Check if a directory exists.
+
+        This operation always succeeds and returns existence status.
+        Unlike list operation, this doesn't fail if directory doesn't exist.
+        """
+        try:
+            exists = path.exists()
+            is_directory = path.is_dir() if exists else False
+
+            return {
+                "success": True,
+                "message": f"Checked existence of: {self._normalize_path_for_response(path)}",
+                "directory_path": self._normalize_path_for_response(path),
+                "operation": "check_exists",
+                "exists": exists,
+                "is_directory": is_directory
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to check directory existence: {str(e)}"
             }

@@ -31,7 +31,7 @@ class FileEditorTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to the file to edit"
+                    "description": "Relative path to the file to edit (e.g., 'file.txt', 'dir/file.txt')"
                 },
                 "operation": {
                     "type": "string",

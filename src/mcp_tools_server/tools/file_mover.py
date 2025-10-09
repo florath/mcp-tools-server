@@ -140,23 +140,12 @@ class FileMoverTool(BaseTool):
             "properties": {
                 "source_path": {
                     "type": "string",
-                    "description": "Path to the source file to move/rename (must exist and be within allowed directories)"
+                    "description": "Path to the source file to move or rename"
                 },
                 "destination_path": {
-                    "type": "string", 
-                    "description": "Path where the file should be moved to (must be within allowed directories)"
-                },
-                "overwrite": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Allow overwriting existing destination file (default: false)"
-                },
-                "create_backup": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Create a backup copy if overwriting an existing file (default: false)"
+                    "type": "string",
+                    "description": "Path where the file should be moved to"
                 }
             },
-            "required": ["source_path", "destination_path"],
-            "additionalProperties": False
+            "required": ["source_path", "destination_path"]
         }

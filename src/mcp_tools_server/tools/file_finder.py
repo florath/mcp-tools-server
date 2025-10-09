@@ -31,33 +31,6 @@ class FileFinderTool(BaseTool):
                 "pattern": {
                     "type": "string",
                     "description": "Pattern to search for (supports wildcards like *.py, test_*, etc.)"
-                },
-                "search_directory": {
-                    "type": "string",
-                    "description": "Directory to search in (default: all allowed directories)"
-                },
-                "file_type": {
-                    "type": "string",
-                    "description": "Type of items to find: 'files', 'directories', or 'both'",
-                    "enum": ["files", "directories", "both"],
-                    "default": "both"
-                },
-                "recursive": {
-                    "type": "boolean",
-                    "description": "Search recursively in subdirectories",
-                    "default": True
-                },
-                "case_sensitive": {
-                    "type": "boolean", 
-                    "description": "Case sensitive pattern matching",
-                    "default": False
-                },
-                "max_results": {
-                    "type": "integer",
-                    "description": "Maximum number of results to return",
-                    "default": 100,
-                    "minimum": 1,
-                    "maximum": 1000
                 }
             },
             "required": ["pattern"]

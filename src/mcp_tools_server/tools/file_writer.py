@@ -144,24 +144,12 @@ class FileWriterTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to the file to create or overwrite (must be within allowed directories)"
+                    "description": "Relative path to the file to create or overwrite (e.g., 'file.txt', 'dir/file.txt')"
                 },
                 "content": {
                     "type": "string",
-                    "default": "",
-                    "description": "Content to write to the file (default: empty string)"
-                },
-                "encoding": {
-                    "type": "string",
-                    "default": "utf-8",
-                    "description": "File encoding (default: utf-8)"
-                },
-                "create_dirs": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Create parent directories if they don't exist (default: true)"
+                    "description": "Content to write to the file"
                 }
             },
-            "required": ["file_path"],
-            "additionalProperties": False
+            "required": ["file_path", "content"]
         }

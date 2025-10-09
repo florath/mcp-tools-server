@@ -31,45 +31,10 @@ class PythonRunnerTool(BaseTool):
             "properties": {
                 "code": {
                     "type": "string",
-                    "description": "Python code to execute (alternative to script_path)"
-                },
-                "script_path": {
-                    "type": "string",
-                    "description": "Path to Python script file to execute (alternative to code)"
-                },
-                "args": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Command line arguments to pass to the script",
-                    "default": []
-                },
-                "working_directory": {
-                    "type": "string",
-                    "description": "Working directory for script execution (must be in allowed directories)"
-                },
-                "timeout_seconds": {
-                    "type": "integer",
-                    "description": "Timeout for script execution in seconds",
-                    "default": 30,
-                    "minimum": 1,
-                    "maximum": 300
-                },
-                "capture_output": {
-                    "type": "boolean",
-                    "description": "Capture stdout and stderr output",
-                    "default": True
-                },
-                "environment_vars": {
-                    "type": "object",
-                    "description": "Additional environment variables to set",
-                    "default": {}
+                    "description": "Python code to execute"
                 }
             },
-            "required": [],
-            "oneOf": [
-                {"required": ["code"]},
-                {"required": ["script_path"]}
-            ]
+            "required": ["code"]
         }
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:

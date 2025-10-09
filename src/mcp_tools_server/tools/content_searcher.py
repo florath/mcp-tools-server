@@ -32,52 +32,7 @@ class ContentSearcherTool(BaseTool):
             "properties": {
                 "search_term": {
                     "type": "string",
-                    "description": "Text or regex pattern to search for"
-                },
-                "search_directory": {
-                    "type": "string",
-                    "description": "Directory to search in (default: all allowed directories)"
-                },
-                "file_pattern": {
-                    "type": "string",
-                    "description": "File pattern to search within (e.g., '*.py', '*.js')",
-                    "default": "*"
-                },
-                "case_sensitive": {
-                    "type": "boolean",
-                    "description": "Case sensitive search",
-                    "default": False
-                },
-                "use_regex": {
-                    "type": "boolean",
-                    "description": "Treat search_term as regex pattern",
-                    "default": False
-                },
-                "include_line_numbers": {
-                    "type": "boolean",
-                    "description": "Include line numbers in results",
-                    "default": True
-                },
-                "context_lines": {
-                    "type": "integer",
-                    "description": "Number of context lines before/after match",
-                    "default": 0,
-                    "minimum": 0,
-                    "maximum": 10
-                },
-                "max_results": {
-                    "type": "integer",
-                    "description": "Maximum number of matches to return",
-                    "default": 100,
-                    "minimum": 1,
-                    "maximum": 1000
-                },
-                "max_file_size_mb": {
-                    "type": "number",
-                    "description": "Skip files larger than this size in MB",
-                    "default": 10,
-                    "minimum": 0.1,
-                    "maximum": 100
+                    "description": "Text pattern to search for in files"
                 }
             },
             "required": ["search_term"]

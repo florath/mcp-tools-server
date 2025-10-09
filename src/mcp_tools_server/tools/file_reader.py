@@ -64,7 +64,13 @@ class FileReaderTool(BaseTool):
             
         except SecurityError as e:
             logger.warning(f"Security error reading file: {e}")
-            raise ValueError(f"Security error: {e}")
+            # Provide clearer error messages for common cases
+            if "does not exist" in str(e).lower():
+                raise ValueError(f"File not found: {params.get('file_path')}")
+            elif "not a file" in str(e).lower():
+                raise ValueError(f"Path is not a file: {params.get('file_path')}")
+            else:
+                raise ValueError(f"Security error: {e}")
         except Exception as e:
             logger.error(f"Error reading file {params.get('file_path')}: {e}")
             raise ValueError(f"File reading error: {e}")
@@ -91,19 +97,8 @@ class FileReaderTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to the file to read (must be within allowed directories)"
-                },
-                "encoding": {
-                    "type": "string",
-                    "default": "utf-8",
-                    "description": "File encoding (default: utf-8)"
-                },
-                "include_line_numbers": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Include line numbers in the response (default: false)"
+                    "description": "Relative path to the file to read (e.g., 'file.txt', 'dir/file.txt')"
                 }
             },
-            "required": ["file_path"],
-            "additionalProperties": False
+            "required": ["file_path"]
         }

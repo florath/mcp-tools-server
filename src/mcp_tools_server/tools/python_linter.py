@@ -88,26 +88,10 @@ class PythonLinterTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to Python file or directory to lint"
-                },
-                "linter_type": {
-                    "type": "string", 
-                    "description": "Linter to use: 'ruff', 'mypy', 'bandit', or 'all'",
-                    "default": "ruff",
-                    "enum": ["ruff", "mypy", "bandit", "all"]
-                },
-                "fix_issues": {
-                    "type": "boolean",
-                    "description": "Auto-fix issues (only supported by Ruff)",
-                    "default": False
-                },
-                "config_file": {
-                    "type": "string",
-                    "description": "Optional path to configuration file"
+                    "description": "Relative path to Python file or directory to lint (e.g., 'script.py', 'src/')"
                 }
             },
-            "required": ["file_path"],
-            "additionalProperties": False
+            "required": ["file_path"]
         }
 
     

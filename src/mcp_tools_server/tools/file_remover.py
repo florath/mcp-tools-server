@@ -26,44 +26,73 @@ class FileRemoverTool(BaseTool):
         self.security_validator = security_validator
     
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute file removal with parameters."""
+        """Execute file removal with parameters - idempotent operation."""
         try:
             # Extract parameters
             file_path = params.get('file_path')
             force = params.get('force', False)
             create_backup = params.get('create_backup', False)
-            
+
             if not file_path:
                 raise ValueError("file_path parameter is required")
-            
-            # Security validation
+
+            # IDEMPOTENT OPERATION: Check if file exists first
+            # If it doesn't exist, return success (already deleted)
             if self.security_validator:
-                target_path = self.security_validator.validate_file_path(file_path)
+                try:
+                    target_path = self.security_validator.validate_file_path(file_path)
+                except SecurityError as e:
+                    # Check if this is a "file doesn't exist" error
+                    if "does not exist" in str(e).lower():
+                        logger.info(f"File already deleted or never existed: {file_path}")
+                        return {
+                            "file_path": file_path,
+                            "size_bytes": 0,
+                            "backup_created": False,
+                            "backup_path": None,
+                            "force_used": force,
+                            "timestamp": datetime.now().isoformat(),
+                            "idempotent": True,
+                            "message": "File already deleted or never existed"
+                        }
+                    else:
+                        # Re-raise other security errors
+                        raise
             else:
                 target_path = Path(file_path)
                 if not target_path.exists():
-                    raise ValueError(f"File does not exist: {file_path}")
+                    logger.info(f"File already deleted or never existed: {file_path}")
+                    return {
+                        "file_path": file_path,
+                        "size_bytes": 0,
+                        "backup_created": False,
+                        "backup_path": None,
+                        "force_used": force,
+                        "timestamp": datetime.now().isoformat(),
+                        "idempotent": True,
+                        "message": "File already deleted or never existed"
+                    }
                 if not target_path.is_file():
                     raise ValueError(f"Path is not a file: {file_path}")
-            
+
             logger.info(f"Removing file: {target_path}")
-            
+
             # Get file stats before removal
             file_stats = target_path.stat()
             file_size = file_stats.st_size
-            
+
             # Safety checks (unless force is True)
             if not force:
                 await self._perform_safety_checks(target_path, file_path)
-            
+
             backup_path = None
             # Create backup if requested
             if create_backup:
                 backup_path = await self._create_backup(target_path)
-            
+
             # Remove the file
             await self._remove_file(target_path)
-            
+
             # Format response
             result = {
                 "file_path": self._normalize_path_for_response(target_path),
@@ -71,12 +100,14 @@ class FileRemoverTool(BaseTool):
                 "backup_created": create_backup,
                 "backup_path": self._normalize_path_for_response(backup_path) if backup_path else None,
                 "force_used": force,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "idempotent": False,
+                "message": "File successfully removed"
             }
-            
+
             logger.info(f"Successfully removed file: {target_path}")
             return result
-            
+
         except SecurityError as e:
             logger.warning(f"Security error removing file: {e}")
             raise ValueError(f"Security error: {e}")
@@ -131,19 +162,8 @@ class FileRemoverTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to the file to remove (must be within allowed directories and exist)"
-                },
-                "force": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Skip additional safety checks (default: false)"
-                },
-                "create_backup": {
-                    "type": "boolean", 
-                    "default": False,
-                    "description": "Create a backup copy before removal (default: false)"
+                    "description": "Relative path to the file to remove (e.g., 'file.txt', 'dir/file.txt')"
                 }
             },
-            "required": ["file_path"],
-            "additionalProperties": False
+            "required": ["file_path"]
         }

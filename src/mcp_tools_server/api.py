@@ -40,7 +40,6 @@ class MCPServerManager:
     def start_server(
         self,
         port: int,
-        allowed_directory: str,
         host: str = "127.0.0.1",
         max_file_size_mb: int = 100,
         debug: bool = False,
@@ -48,25 +47,22 @@ class MCPServerManager:
     ) -> bool:
         """
         Start MCP Tools Server programmatically.
-        
+
+        NOTE: This server uses session-based access only. All file operations
+        require a valid session to be created through the /sessions API.
+
         Args:
             port: Port to run server on
-            allowed_directory: Single directory to allow filesystem access
             host: Host to bind to (default: 127.0.0.1)
             max_file_size_mb: Maximum file size limit
             debug: Enable debug mode
             log_level: Logging level
-            
+
         Returns:
             True if server started successfully, False otherwise
         """
         if self._running:
             self.logger.warning("Server is already running")
-            return False
-            
-        # Validate directory exists
-        if not Path(allowed_directory).exists():
-            self.logger.error(f"Allowed directory does not exist: {allowed_directory}")
             return False
             
         # Check if port is available
@@ -83,12 +79,11 @@ class MCPServerManager:
                     debug=debug
                 ),
                 security=SecurityConfig(
-                    allowed_directory=str(Path(allowed_directory).resolve()),
                     max_file_size_mb=max_file_size_mb,
                     allowed_file_extensions=[
-                        ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
+                        ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts",
                         ".md", ".csv", ".xml", ".html", ".css", ".sql", ".toml",
-                        ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile", 
+                        ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile",
                         ".dockerignore", ".gitignore", ".env", ".lock"
                     ]
                 ),
@@ -111,7 +106,7 @@ class MCPServerManager:
             for _ in range(max_wait * 10):  # Check every 100ms
                 if self._running:
                     self.logger.info(f"MCP Tools Server started on {host}:{port}")
-                    self.logger.info(f"Allowed directory: {allowed_directory}")
+                    self.logger.info("Session-based access only - use /sessions API")
                     return True
                 time.sleep(0.1)
                 
@@ -182,9 +177,9 @@ class MCPServerManager:
             "config": {
                 "host": self.config.server.host,
                 "port": self.config.server.port,
-                "allowed_directory": self.config.security.allowed_directory,
                 "max_file_size_mb": self.config.security.max_file_size_mb,
-                "debug": self.config.server.debug
+                "debug": self.config.server.debug,
+                "access_mode": "session-based"
             }
         }
     
@@ -248,32 +243,32 @@ class MCPServerManager:
 @asynccontextmanager
 async def managed_mcp_server(
     port: int,
-    allowed_directory: str,
     host: str = "127.0.0.1",
     **kwargs
 ):
     """
     Async context manager for MCP Tools Server.
-    
+
+    NOTE: Server uses session-based access only. Create sessions via /sessions API.
+
     Args:
         port: Port to run server on
-        allowed_directory: Directory to allow access to
         host: Host to bind to
         **kwargs: Additional server configuration
-        
+
     Yields:
         MCPServerManager instance with running server
-        
+
     Example:
-        async with managed_mcp_server(7092, "/project/dir") as server:
-            # Server is running
+        async with managed_mcp_server(7092) as server:
+            # Server is running with session-based access
             status = server.get_status()
-            # Use server...
+            # Create sessions via POST /sessions
         # Server is automatically stopped
     """
     manager = MCPServerManager()
     try:
-        success = manager.start_server(port, allowed_directory, host, **kwargs)
+        success = manager.start_server(port, host, **kwargs)
         if not success:
             raise RuntimeError("Failed to start MCP server")
         yield manager

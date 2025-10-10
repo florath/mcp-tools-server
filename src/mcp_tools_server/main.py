@@ -46,10 +46,6 @@ def main():
         help="Override port from config"
     )
     parser.add_argument(
-        "--allowed-directory",
-        help="Override allowed directory from config"
-    )
-    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Override log level (DEBUG, INFO, WARNING, ERROR)"
@@ -69,8 +65,6 @@ def main():
         config.server.host = args.host
     if args.port:
         config.server.port = args.port
-    if args.allowed_directory:
-        config.security.allowed_directory = args.allowed_directory
     if args.log_level:
         config.logging.level = args.log_level
     
@@ -78,7 +72,7 @@ def main():
     setup_logging(config)
     
     logger.server_event(f"Starting MCP Tools Server on {config.server.host}:{config.server.port}")
-    logger.server_event(f"Security: allowed directory = {config.security.allowed_directory or 'unrestricted'}")
+    logger.server_event("Security: Session-based access only")
     
     # Create server
     try:

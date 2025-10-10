@@ -15,7 +15,6 @@ class ServerConfig(BaseModel):
 
 class SecurityConfig(BaseModel):
     """Security configuration."""
-    allowed_directory: str = ""
     max_file_size_mb: int = 100
     allowed_file_extensions: List[str] = Field(default_factory=list)
 

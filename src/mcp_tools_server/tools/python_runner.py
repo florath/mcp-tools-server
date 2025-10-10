@@ -99,11 +99,14 @@ class PythonRunnerTool(BaseTool):
                         "error": f"Security validation failed for working directory: {str(e)}"
                     }
             else:
-                # Use allowed directory as default working directory
-                if self.security_validator.allowed_dir:
-                    work_dir = self.security_validator.allowed_dir
+                # Use session directory as default working directory
+                if self.security_validator._session_directory:
+                    work_dir = self.security_validator._session_directory
                 else:
-                    work_dir = Path.cwd()
+                    return {
+                        "success": False,
+                        "error": "No active session. Python runner requires a valid session directory."
+                    }
             
             # Execute the Python code/script
             result = await self._run_python(

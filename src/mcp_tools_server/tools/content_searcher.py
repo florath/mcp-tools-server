@@ -85,7 +85,7 @@ class ContentSearcherTool(BaseTool):
                     "error": f"Invalid regex pattern: {str(e)}"
                 }
             
-            # Determine search directories
+            # Determine search directories - ONLY use session directory for security isolation
             search_paths = []
             if search_directory:
                 try:
@@ -103,17 +103,21 @@ class ContentSearcherTool(BaseTool):
                         "error": f"Security validation failed for search directory: {str(e)}"
                     }
             else:
-                # Use the allowed directory
-                allowed_dir = self.security_validator.allowed_dir
-                if not allowed_dir:
+                # SECURITY: Only allow search when session directory is active
+                # This enforces strict session isolation and prevents cross-stage access
+                session_dir = self.security_validator._session_directory
+                if not session_dir:
                     return {
                         "success": False,
-                        "error": "No allowed directory configured and no search_directory specified"
+                        "error": "No active session. Content search requires a valid session ID for security isolation."
                     }
-                if allowed_dir.exists() and allowed_dir.is_dir():
-                    search_paths = [allowed_dir]
+                if session_dir.exists() and session_dir.is_dir():
+                    search_paths = [session_dir]
                 else:
-                    search_paths = []
+                    return {
+                        "success": False,
+                        "error": f"Session directory does not exist or is not accessible: {session_dir}"
+                    }
             
             # Search for content
             results = await self._search_content(

@@ -313,10 +313,11 @@ class MCPToolsServer:
                            params=params,
                            session_id=session_id)
                 
-                # Extract and validate reason field
+                # Extract reason field (optional, but logged if provided)
                 reason = params.get("reason", "")
-                if not reason or len(reason.strip()) < 10:
-                    raise ValueError(f"Tool call missing or insufficient reason. Please provide a clear explanation (at least 10 characters) of why you need to use the {tool_name} tool.")
+                if reason and len(reason.strip()) < 10:
+                    # Warn but don't reject if reason is too short
+                    logger.warning(f"Tool {tool_name} called with insufficient reason: '{reason}' ({len(reason)} chars)")
                 
                 # Log tool usage with reason
                 # Tool call logging is now handled by individual tools in their execute method

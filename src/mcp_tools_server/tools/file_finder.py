@@ -157,18 +157,14 @@ class FileFinderTool(BaseTool):
                     if fnmatch.fnmatch(item_name, search_pattern):
                         try:
                             stat = item.stat()
-                            
+
                             # Use helper function for consistent path normalization
                             item_path = self._normalize_path_for_response(item)
-                            parent_path = self._normalize_path_for_response(item.parent) if item.parent else "."
-                            
+
                             result = {
                                 "path": item_path,
-                                "name": item.name,
                                 "type": "directory" if item.is_dir() else "file",
-                                "size": stat.st_size if item.is_file() else None,
-                                "parent_directory": parent_path,
-                                "relative_path": str(item.relative_to(search_path))
+                                "size": stat.st_size if item.is_file() else None
                             }
                             results.append(result)
                         except (OSError, PermissionError) as e:

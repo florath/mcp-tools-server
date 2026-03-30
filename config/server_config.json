@@ -5,7 +5,7 @@
         "debug": true
     },
     "security": {
-        "allowed_directory": "/home/florath/devel/REP/requirements-evolution-platform",
+        "allowed_directory": "/home/florath/devel/VLLM-PROXY",
         "max_file_size_mb": 100,
         "allowed_file_extensions": [
             ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 

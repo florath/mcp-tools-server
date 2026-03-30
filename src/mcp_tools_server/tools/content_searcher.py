@@ -103,20 +103,20 @@ class ContentSearcherTool(BaseTool):
                         "error": f"Security validation failed for search directory: {str(e)}"
                     }
             else:
-                # SECURITY: Only allow search when session directory is active
-                # This enforces strict session isolation and prevents cross-stage access
-                session_dir = self.security_validator._session_directory
-                if not session_dir:
+                # Use effective base directory (session or allowed directory)
+                try:
+                    search_path = self.security_validator.get_effective_base_directory()
+                    if search_path.exists() and search_path.is_dir():
+                        search_paths = [search_path]
+                    else:
+                        return {
+                            "success": False,
+                            "error": f"Base directory does not exist or is not accessible: {search_path}"
+                        }
+                except Exception as e:
                     return {
                         "success": False,
-                        "error": "No active session. Content search requires a valid session ID for security isolation."
-                    }
-                if session_dir.exists() and session_dir.is_dir():
-                    search_paths = [session_dir]
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Session directory does not exist or is not accessible: {session_dir}"
+                        "error": f"Could not determine search directory: {str(e)}"
                     }
             
             # Search for content

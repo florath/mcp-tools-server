@@ -24,16 +24,23 @@ class SecurityValidator:
         self.config = security_config
         self.max_file_size_bytes = security_config.max_file_size_mb * 1024 * 1024
         self._session_directory: Optional[Path] = None
+        self._allowed_directory: Optional[Path] = None
     
     def set_session_directory(self, session_directory: Optional[Path]) -> None:
         """Set session directory for current request context."""
         self._session_directory = session_directory
     
+    def set_allowed_directory(self, allowed_directory: Optional[Path]) -> None:
+        """Set allowed directory for file operations when not using sessions."""
+        self._allowed_directory = allowed_directory.resolve() if allowed_directory else None
+
     def get_effective_base_directory(self) -> Path:
-        """Get the effective base directory (session dir only)."""
-        if not self._session_directory:
-            raise SecurityError("No active session. All operations require a valid session directory.")
-        return self._session_directory
+        """Get the effective base directory (session dir or allowed directory)."""
+        if self._session_directory:
+            return self._session_directory
+        if self._allowed_directory:
+            return self._allowed_directory
+        raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
     
     def validate_file_path(self, file_path: str) -> Path:
         """Validate file path against security policies."""
@@ -124,15 +131,18 @@ class SecurityValidator:
             raise SecurityError(f"Filename validation error: {e}")
     
     def _is_path_allowed(self, path: Path) -> bool:
-        """Check if path is within the session directory."""
-        if not self._session_directory:
-            raise SecurityError("No active session. All operations require a valid session directory.")
-
-        try:
-            return path.is_relative_to(self._session_directory)
-        except ValueError:
-            # Fallback to string comparison for edge cases
-            return str(path).startswith(str(self._session_directory))
+        """Check if path is within the session directory or allowed directory."""
+        if self._session_directory:
+            try:
+                return path.is_relative_to(self._session_directory)
+            except ValueError:
+                return str(path).startswith(str(self._session_directory))
+        if self._allowed_directory:
+            try:
+                return path.is_relative_to(self._allowed_directory)
+            except ValueError:
+                return str(path).startswith(str(self._allowed_directory))
+        raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
     
     def _is_extension_allowed(self, path: Path) -> bool:
         """Check if file extension is allowed."""
@@ -160,34 +170,40 @@ class SecurityValidator:
             raise SecurityError(f"Directory path validation error: {e}")
     
     def _resolve_path(self, path_str: str) -> Path:
-        """Resolve path, handling relative paths against the session directory."""
+        """Resolve path, handling both absolute and relative paths."""
         path = Path(path_str)
 
-        # SECURITY: Reject absolute paths to enforce session isolation
-        # This prevents tools from accessing files outside the session directory
+        # Check if we have session directory or allowed directory
+        base_dir = self._session_directory or self._allowed_directory
+        if not base_dir:
+            raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
+
+        # Handle absolute paths - only allow if within allowed directory
         if path.is_absolute():
-            raise SecurityError(
-                "Absolute paths are not allowed for security reasons. Use relative paths only."
-            )
+            try:
+                if not path.is_relative_to(base_dir):
+                    raise SecurityError(f"Absolute path '{path}' is outside the allowed directory '{base_dir}'")
+                return path.resolve()
+            except ValueError:
+                # Fallback for different filesystems
+                if not str(path).startswith(str(base_dir)):
+                    raise SecurityError(f"Absolute path '{path}' is outside the allowed directory '{base_dir}'")
+                return path.resolve()
 
-        # For relative paths, resolve against the session directory
-        if not self._session_directory:
-            raise SecurityError("No active session. All operations require a valid session directory.")
+        # For relative paths, resolve against the base directory (session or allowed)
+        candidate_path = (base_dir / path).resolve()
 
-        candidate_path = (self._session_directory / path).resolve()
-
-        # CRITICAL: Ensure the resolved path is still within the session directory
-        # This prevents directory creation outside the session when using parents=True
+        # Ensure the resolved path is still within the base directory
         try:
-            if not candidate_path.is_relative_to(self._session_directory):
+            if not candidate_path.is_relative_to(base_dir):
                 raise SecurityError(
-                    "Resolved path would be outside session directory"
+                    f"Resolved path would be outside the base directory '{base_dir}'"
                 )
         except ValueError:
             # Fallback for different filesystems
-            if not str(candidate_path).startswith(str(self._session_directory)):
+            if not str(candidate_path).startswith(str(base_dir)):
                 raise SecurityError(
-                    "Resolved path would be outside session directory"
+                    f"Resolved path would be outside the base directory '{base_dir}'"
                 )
 
         return candidate_path
@@ -196,6 +212,7 @@ class SecurityValidator:
         """Get current security configuration info."""
         return {
             "session_directory": str(self._session_directory) if self._session_directory else None,
+            "allowed_directory": str(self._allowed_directory) if self._allowed_directory else None,
             "max_file_size_mb": self.config.max_file_size_mb,
             "allowed_extensions": self.config.allowed_file_extensions
         }
@@ -206,6 +223,9 @@ class SecurityValidator:
             # Only show the last part of the path to avoid exposing absolute paths
             dir_name = self._session_directory.name
             return f" in session directory '{dir_name}'"
+        if self._allowed_directory:
+            dir_name = self._allowed_directory.name
+            return f" in allowed directory '{dir_name}'"
         return " (no active session)"
     
     def _get_available_directories_info(self) -> str:

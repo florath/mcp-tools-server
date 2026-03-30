@@ -1,7 +1,10 @@
 """FastAPI server setup and routing."""
 
+import json
 import logging
-from typing import Dict, Any
+import uuid
+from typing import Dict, Any, Optional
+from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,11 +37,23 @@ class MCPToolsServer:
         # Initialize security validator
         self.security_validator = SecurityValidator(config.security)
         
+        # Set allowed directory from config for session-less operations
+        if config.security.allowed_directory:
+            self.security_validator.set_allowed_directory(Path(config.security.allowed_directory))
+            logger.info(f"Security: Allowed directory set to {config.security.allowed_directory}")
+        
         # Initialize tool registry
         self.tool_registry = ToolRegistry(config, self.security_validator)
+
+        # MCP session map: mcp_session_id -> rest_session_id
+        self._mcp_sessions: Dict[str, str] = {}
         
+        # Track registered capabilities per session
+        self._registered_capabilities: Dict[str, Dict[str, Any]] = {}
+
         self._setup_middleware()
         self._setup_routes()
+        self._setup_mcp_routes()
         self._setup_exception_handlers()
         self._setup_startup_events()
     
@@ -156,6 +171,127 @@ class MCPToolsServer:
         # Register tool routes
         for tool_name, tool_instance in self.tool_registry.tools.items():
             self._register_tool_route(tool_name, tool_instance)
+    
+    def _setup_mcp_routes(self):
+        """Setup MCP JSON-RPC 2.0 endpoint for Streamable HTTP transport.
+        
+        Handles POST / (the URL configured in codex) as well as POST /mcp
+        (the conventional MCP endpoint path).  Both paths share the same handler.
+        """
+
+        async def _mcp_handler(request: Request) -> JSONResponse:
+            """Handle MCP JSON-RPC requests."""
+            try:
+                body = await request.json()
+            except Exception:
+                return JSONResponse(
+                    status_code=400,
+                    content={"jsonrpc": "2.0", "id": None,
+                             "error": {"code": -32700, "message": "Parse error"}},
+                )
+
+            method: str = body.get("method", "")
+            msg_id = body.get("id")          # None for notifications
+            params: Dict[str, Any] = body.get("params") or {}
+            mcp_session_id: Optional[str] = request.headers.get("mcp-session-id")
+
+            # --- initialize ---
+            if method == "initialize":
+                new_mcp_session_id = str(uuid.uuid4())
+
+                # If the caller passes a custom rootDirectory, create a REST session for it
+                root_directory: Optional[str] = params.get("rootDirectory") or params.get("_directory")
+                if root_directory:
+                    try:
+                        rest_session_id = await self.session_manager.create_session(root_directory)
+                        self._mcp_sessions[new_mcp_session_id] = rest_session_id
+                        logger.debug(f"MCP session {new_mcp_session_id} linked to REST session {rest_session_id} for {root_directory}")
+                    except Exception as exc:
+                        logger.warning(f"Could not create REST session for rootDirectory '{root_directory}': {exc}")
+
+                # Also accept an explicit X-MCP-Session-ID header on initialize
+                linked_rest_session = request.headers.get("X-MCP-Session-ID")
+                if linked_rest_session and new_mcp_session_id not in self._mcp_sessions:
+                    self._mcp_sessions[new_mcp_session_id] = linked_rest_session
+
+                response_body = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {"name": "MCP Tools Server", "version": "0.1.0"},
+                    },
+                }
+                resp = JSONResponse(content=response_body)
+                resp.headers["mcp-session-id"] = new_mcp_session_id
+                return resp
+
+            # --- tools/list ---
+            if method == "tools/list":
+                tools = []
+                for name, tool_instance in self.tool_registry.tools.items():
+                    schema = tool_instance.get_parameters_schema()
+                    tools.append({
+                        "name": name,
+                        "description": tool_instance.description,
+                        "inputSchema": schema,
+                    })
+                return JSONResponse(content={
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {"tools": tools},
+                })
+
+            # --- tools/call ---
+            if method == "tools/call":
+                tool_name: str = params.get("name", "")
+                arguments: Dict[str, Any] = params.get("arguments") or {}
+                
+                logger.info(f"MCP tools/call: {tool_name}",
+                           tool_name=tool_name,
+                           operation="mcp_tool_call",
+                           params=arguments)
+
+                tool_instance = self.tool_registry.get_tool(tool_name)
+                if tool_instance is None:
+                    return JSONResponse(content={
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "error": {"code": -32602, "message": f"Tool not found: {tool_name}"},
+                    })
+
+                try:
+                    result = await tool_instance.execute(arguments)
+                    content_text = json.dumps(result) if isinstance(result, (dict, list)) else str(result)
+                    return JSONResponse(content={
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "result": {"content": [{"type": "text", "text": content_text}]},
+                    })
+                except Exception as exc:
+                    logger.warning(f"MCP tools/call error for '{tool_name}': {exc}")
+                    return JSONResponse(content={
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "error": {"code": -32603, "message": str(exc)},
+                    })
+
+            # --- notifications (no response body needed) ---
+            if msg_id is None:
+                return JSONResponse(status_code=202, content={})
+
+            # --- unknown method ---
+            return JSONResponse(content={
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
+            })
+
+        # Register at both the root path (matches the current codex config URL)
+        # and the conventional /mcp path.
+        self.app.add_api_route("/", _mcp_handler, methods=["POST"])
+        self.app.add_api_route("/mcp", _mcp_handler, methods=["POST"])
     
     def _setup_session_routes(self):
         """Setup session management routes."""

@@ -36,6 +36,9 @@ class DirectoryListTool(BaseTool):
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the directory list tool."""
+        # Log tool call
+        self.log_tool_call(params)
+        
         try:
             directory_path = params.get('directory_path')
 
@@ -54,10 +57,13 @@ class DirectoryListTool(BaseTool):
                     "error": f"Security validation failed: {str(e)}"
                 }
 
-            return await self._list_directory(path)
+            result = await self._list_directory(path)
+            self.log_tool_result(result)
+            return result
 
         except Exception as e:
             logger.error(f"Error in directory_list tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -109,6 +115,7 @@ class DirectoryListTool(BaseTool):
             }
 
         except Exception as e:
+            self.log_tool_error(str(e), {})
             return {
                 "success": False,
                 "error": f"Failed to list directory: {str(e)}"

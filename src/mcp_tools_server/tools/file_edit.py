@@ -99,6 +99,13 @@ class FileEditTool(BaseTool):
             return {"success": False, "error": "operation must be 'edit', 'insert', or 'delete'"}
         if line_number is None:
             return {"success": False, "error": "line_number is required"}
+
+        # Infer line_end from old_content when not explicitly provided.
+        # This lets callers omit line_end for multi-line edits/deletes —
+        # they just supply old_content and the range is computed automatically.
+        if line_end is None and old_content is not None:
+            line_end = line_number + len(old_content.splitlines()) - 1
+
         if line_end is not None and line_end < line_number:
             return {"success": False, "error": "line_end must be >= line_number"}
         if operation in ("edit", "delete") and old_content is None:

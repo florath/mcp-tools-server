@@ -6,7 +6,6 @@ in other applications without subprocess management.
 """
 
 import asyncio
-import logging
 import socket
 import threading
 import time
@@ -19,6 +18,7 @@ from uvicorn.config import Config as UvicornConfig
 
 from .core.config import Config, ServerConfig, SecurityConfig, LoggingConfig, ToolsConfig
 from .core.server import MCPToolsServer
+from .core.structured_logger import logger
 
 
 class MCPServerManager:
@@ -33,7 +33,6 @@ class MCPServerManager:
         self.server_task: Optional[asyncio.Task] = None
         self.uvicorn_server: Optional[uvicorn.Server] = None
         self.config: Optional[Config] = None
-        self.logger = logging.getLogger(__name__)
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         
@@ -60,12 +59,12 @@ class MCPServerManager:
             True if server started successfully, False otherwise
         """
         if self._running:
-            self.logger.warning("Server is already running")
+            logger.warning("Server is already running")
             return False
             
         # Check if port is available
         if not self._is_port_available(host, port):
-            self.logger.error(f"Port {port} is already in use")
+            logger.error(f"Port {port} is already in use")
             return False
             
         try:
@@ -103,15 +102,15 @@ class MCPServerManager:
             max_wait = 10  # seconds
             for _ in range(max_wait * 10):  # Check every 100ms
                 if self._running:
-                    self.logger.info(f"MCP Tools Server started on {host}:{port}")
+                    logger.info(f"MCP Tools Server started on {host}:{port}")
                     return True
                 time.sleep(0.1)
                 
-            self.logger.error("Server failed to start within timeout")
+            logger.error("Server failed to start within timeout")
             return False
             
         except Exception as e:
-            self.logger.error(f"Failed to start server: {e}")
+            logger.error(f"Failed to start server: {e}")
             return False
     
     def stop_server(self, timeout: float = 10.0) -> bool:
@@ -125,7 +124,7 @@ class MCPServerManager:
             True if server stopped successfully, False otherwise
         """
         if not self._running:
-            self.logger.warning("Server is not running")
+            logger.warning("Server is not running")
             return True
             
         try:
@@ -141,7 +140,7 @@ class MCPServerManager:
                 self.server_thread.join(timeout=timeout)
                 
                 if self.server_thread.is_alive():
-                    self.logger.warning("Server thread did not terminate gracefully")
+                    logger.warning("Server thread did not terminate gracefully")
                     return False
                     
             self.server_thread = None
@@ -149,11 +148,11 @@ class MCPServerManager:
             self.config = None
             self._loop = None
             
-            self.logger.info("MCP Tools Server stopped")
+            logger.info("MCP Tools Server stopped")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to stop server: {e}")
+            logger.error(f"Failed to stop server: {e}")
             return False
     
     def get_status(self) -> Dict[str, Any]:
@@ -211,7 +210,7 @@ class MCPServerManager:
             self._loop.run_until_complete(self.uvicorn_server.serve())
             
         except Exception as e:
-            self.logger.error(f"Server thread error: {e}")
+            logger.error(f"Server thread error: {e}")
         finally:
             self._running = False
             if self._loop:

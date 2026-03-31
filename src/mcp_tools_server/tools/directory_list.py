@@ -8,7 +8,7 @@ from .base import BaseTool
 from ..security.validator import SecurityValidator
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 class DirectoryListTool(BaseTool):
@@ -62,7 +62,6 @@ class DirectoryListTool(BaseTool):
             return result
 
         except Exception as e:
-            logger.error(f"Error in directory_list tool: {e}")
             self.log_tool_error(str(e), params)
             return {
                 "success": False,

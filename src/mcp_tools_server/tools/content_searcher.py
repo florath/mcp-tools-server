@@ -1,7 +1,6 @@
 """Content searcher tool for MCP tools server."""
 
 import asyncio
-import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -11,9 +10,7 @@ import aiofiles
 from .base import BaseTool
 from ..security.validator import SecurityValidator
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class ContentSearcherTool(BaseTool):
     """Tool for searching text content within files."""
@@ -140,7 +137,7 @@ class ContentSearcherTool(BaseTool):
             }
             
         except Exception as e:
-            logger.error(f"Error in content_searcher tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -211,10 +208,10 @@ class ContentSearcherTool(BaseTool):
                     break
                     
             except PermissionError as e:
-                logger.warning(f"Permission denied accessing {search_path}: {e}")
+                self.log_security_violation("permission_denied", {"path": search_path, "error": str(e)})
                 continue
             except Exception as e:
-                logger.error(f"Error searching in {search_path}: {e}")
+                self.log_tool_error(str(e), {"search_path": search_path})
                 continue
         
         return results
@@ -316,7 +313,7 @@ class ContentSearcherTool(BaseTool):
                 "searched": False
             }
         except Exception as e:
-            logger.error(f"Error searching in file {file_path}: {e}")
+            self.log_tool_error(str(e), {"file_path": file_path})
             return {
                 "file_path": self._normalize_path_for_response(file_path),
                 "relative_path": str(file_path.relative_to(base_path)),

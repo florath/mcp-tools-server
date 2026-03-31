@@ -2,16 +2,13 @@
 
 import asyncio
 import fnmatch
-import logging
 from pathlib import Path
 from typing import Dict, Any, List
 
 from .base import BaseTool
 from ..security.validator import SecurityValidator
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class FileFinderTool(BaseTool):
     """Tool for finding files and directories by name patterns."""
@@ -57,7 +54,6 @@ class FileFinderTool(BaseTool):
                     "success": False,
                     "error": "max_results must be between 1 and 1000"
                 }
-            
             
             # Determine search directories
             search_paths = []
@@ -112,7 +108,7 @@ class FileFinderTool(BaseTool):
             }
             
         except Exception as e:
-            logger.error(f"Error in file_finder tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -168,7 +164,7 @@ class FileFinderTool(BaseTool):
                             }
                             results.append(result)
                         except (OSError, PermissionError) as e:
-                            logger.warning(f"Error accessing {item}: {e}")
+                            self.log_tool_error(f"Error accessing {item}: {e}", {"item": item})
                             continue
                 
                 # Break if we've reached max results across all search paths
@@ -176,10 +172,10 @@ class FileFinderTool(BaseTool):
                     break
                     
             except PermissionError as e:
-                logger.warning(f"Permission denied accessing {search_path}: {e}")
+                self.log_security_violation("permission_denied", {"path": search_path, "error": str(e)})
                 continue
             except Exception as e:
-                logger.error(f"Error searching in {search_path}: {e}")
+                self.log_tool_error(str(e), {"search_path": search_path})
                 continue
         
         # Sort results by path for consistent output

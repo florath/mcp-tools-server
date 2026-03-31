@@ -8,7 +8,7 @@ from .base import BaseTool
 from ..security.validator import SecurityValidator
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 class DirectoryCreateTool(BaseTool):
@@ -57,7 +57,7 @@ class DirectoryCreateTool(BaseTool):
             return await self._create_directory(path)
 
         except Exception as e:
-            logger.error(f"Error in directory_create tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -82,7 +82,7 @@ class DirectoryCreateTool(BaseTool):
 
             # Create the directory with parents
             path.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Created directory: {path}")
+            self.log_tool_result({"path": self._normalize_path_for_response(path)})
 
             return {
                 "success": True,

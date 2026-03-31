@@ -1,7 +1,6 @@
 """Python runner tool for MCP tools server."""
 
 import asyncio
-import logging
 import os
 import tempfile
 from pathlib import Path
@@ -10,9 +9,7 @@ from typing import Dict, Any, Optional
 from .base import BaseTool
 from ..security.validator import SecurityValidator
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class PythonRunnerTool(BaseTool):
     """Tool for executing Python code and scripts."""
@@ -129,7 +126,7 @@ class PythonRunnerTool(BaseTool):
             }
             
         except Exception as e:
-            logger.error(f"Error in python_runner tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -187,7 +184,7 @@ class PythonRunnerTool(BaseTool):
                 else:
                     env['PYTHONPATH'] = str(working_directory)
             
-            logger.info(f"Executing Python: {' '.join(cmd)}")
+            self.log_tool_call({"command": " ".join(cmd)})
             
             # Execute the command
             if capture_output:

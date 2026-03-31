@@ -9,7 +9,7 @@ from .base import BaseTool
 from ..security.validator import SecurityValidator
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 class DirectoryRemoveTool(BaseTool):
@@ -58,7 +58,7 @@ class DirectoryRemoveTool(BaseTool):
             return await self._remove_directory(path)
 
         except Exception as e:
-            logger.error(f"Error in directory_remove tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -94,10 +94,10 @@ class DirectoryRemoveTool(BaseTool):
             # Remove the directory (force remove if not empty)
             if not is_empty:
                 shutil.rmtree(path)
-                logger.info(f"Removed non-empty directory: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path), "force": True})
             else:
                 path.rmdir()
-                logger.info(f"Removed empty directory: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path)})
 
             return {
                 "success": True,

@@ -1,7 +1,6 @@
 """Session management for MCP tools server."""
 
 import asyncio
-import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -10,7 +9,7 @@ from typing import Dict, Optional
 from datetime import datetime, timezone
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 @dataclass

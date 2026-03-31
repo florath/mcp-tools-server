@@ -8,7 +8,7 @@ from .base import BaseTool
 from ..security.validator import SecurityValidator
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 class DirectoryExistsTool(BaseTool):
@@ -57,7 +57,7 @@ class DirectoryExistsTool(BaseTool):
             return await self._check_exists(path)
 
         except Exception as e:
-            logger.error(f"Error in directory_exists tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"

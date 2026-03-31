@@ -1,7 +1,6 @@
 """File remover tool for deleting files with security validation."""
 
 import asyncio
-import logging
 import os
 import shutil
 from typing import Dict, Any, Optional
@@ -11,9 +10,7 @@ from datetime import datetime
 from .base import BaseTool
 from ..security.validator import SecurityError
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class FileRemoverTool(BaseTool):
     """Tool for removing files with security validation and safety features."""
@@ -44,7 +41,7 @@ class FileRemoverTool(BaseTool):
                 except SecurityError as e:
                     # Check if this is a "file doesn't exist" error
                     if "does not exist" in str(e).lower():
-                        logger.info(f"File already deleted or never existed: {file_path}")
+                        self.log_tool_call({"file_path": str(file_path)})
                         return {
                             "file_path": file_path,
                             "size_bytes": 0,
@@ -61,7 +58,7 @@ class FileRemoverTool(BaseTool):
             else:
                 target_path = Path(file_path)
                 if not target_path.exists():
-                    logger.info(f"File already deleted or never existed: {file_path}")
+                    self.log_tool_call({"file_path": str(file_path)})
                     return {
                         "file_path": file_path,
                         "size_bytes": 0,
@@ -75,7 +72,7 @@ class FileRemoverTool(BaseTool):
                 if not target_path.is_file():
                     raise ValueError(f"Path is not a file: {file_path}")
 
-            logger.info(f"Removing file: {target_path}")
+            self.log_tool_call(params)
 
             # Get file stats before removal
             file_stats = target_path.stat()
@@ -105,14 +102,14 @@ class FileRemoverTool(BaseTool):
                 "message": "File successfully removed"
             }
 
-            logger.info(f"Successfully removed file: {target_path}")
+            self.log_tool_result({"success": True, "path": self._normalize_path_for_response(target_path)})
             return result
 
         except SecurityError as e:
-            logger.warning(f"Security error removing file: {e}")
+            self.log_security_violation("security_error", {"error": str(e)})
             raise ValueError(f"Security error: {e}")
         except Exception as e:
-            logger.error(f"Error removing file {params.get('file_path')}: {e}")
+            self.log_tool_error(str(e), params)
             raise ValueError(f"File removal error: {e}")
     
     async def _perform_safety_checks(self, target_path: Path, original_file_path: str) -> None:
@@ -139,7 +136,7 @@ class FileRemoverTool(BaseTool):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, shutil.copy2, str(file_path), str(backup_path))
             
-            logger.info(f"Created backup: {backup_path}")
+            self.log_tool_result({"backup_created": str(backup_path)})
             return backup_path
             
         except Exception as e:

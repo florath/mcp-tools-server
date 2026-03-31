@@ -1,6 +1,5 @@
 """Directory manager tool for MCP tools server."""
 
-import logging
 import os
 import shutil
 from pathlib import Path
@@ -9,9 +8,7 @@ from typing import Dict, Any
 from .base import BaseTool
 from ..security.validator import SecurityValidator
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class DirectoryManagerTool(BaseTool):
     """Tool for managing directories - create, remove, list, and check existence operations."""
@@ -99,7 +96,7 @@ class DirectoryManagerTool(BaseTool):
                 }
                 
         except Exception as e:
-            logger.error(f"Error in directory_manager tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -126,10 +123,10 @@ class DirectoryManagerTool(BaseTool):
             # Create the directory
             if create_parents:
                 path.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Created directory with parents: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path)})
             else:
                 path.mkdir(exist_ok=False)
-                logger.info(f"Created directory: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path)})
             
             return {
                 "success": True,
@@ -194,10 +191,10 @@ class DirectoryManagerTool(BaseTool):
             # Remove the directory
             if force_remove and not is_empty:
                 shutil.rmtree(path)
-                logger.info(f"Force removed non-empty directory: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path), "force": True})
             else:
                 path.rmdir()
-                logger.info(f"Removed empty directory: {path}")
+                self.log_tool_result({"path": self._normalize_path_for_response(path)})
             
             return {
                 "success": True,

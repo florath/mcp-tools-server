@@ -1,7 +1,6 @@
 """Python linter tool for MCP tools server."""
 
 import json
-import logging
 import shutil
 import subprocess
 import asyncio
@@ -11,9 +10,7 @@ from typing import Dict, Any, List, Optional
 from .base import BaseTool
 from ..security.validator import SecurityValidator
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class PythonLinterTool(BaseTool):
     """Tool for running Python linters (Ruff, MyPy, Bandit)."""
@@ -94,7 +91,6 @@ class PythonLinterTool(BaseTool):
             "required": ["file_path"]
         }
 
-    
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the python linter tool."""
         try:
@@ -154,7 +150,7 @@ class PythonLinterTool(BaseTool):
             }
             
         except Exception as e:
-            logger.error(f"Error in python_linter tool: {e}")
+            self.log_tool_error(str(e), params)
             return {
                 "success": False,
                 "error": f"Internal error: {str(e)}"
@@ -201,7 +197,7 @@ class PythonLinterTool(BaseTool):
                     cmd.append(file_path)
             
             # Run the command
-            logger.info(f"Running command: {' '.join(cmd)}")
+            self.log_tool_call({"command": " ".join(cmd)})
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -233,7 +229,7 @@ class PythonLinterTool(BaseTool):
                 "error": "Linter execution timed out (60s limit)"
             }
         except Exception as e:
-            logger.error(f"Error running {linter}: {e}")
+            self.log_tool_error(str(e), {"linter": linter})
             return {
                 "linter": linter,
                 "success": False,
@@ -298,7 +294,7 @@ class PythonLinterTool(BaseTool):
                         })
             
         except Exception as e:
-            logger.error(f"Error parsing {linter} output: {e}")
+            self.log_tool_error(str(e), {"linter": linter})
             issues.append({
                 "message": f"Error parsing {linter} output: {str(e)}",
                 "raw_stdout": stdout,

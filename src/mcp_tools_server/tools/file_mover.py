@@ -1,7 +1,6 @@
 """File mover tool for moving/renaming files with security validation."""
 
 import asyncio
-import logging
 import os
 import shutil
 from typing import Dict, Any, Optional
@@ -11,9 +10,7 @@ from datetime import datetime
 from .base import BaseTool
 from ..security.validator import SecurityError
 
-
-logger = logging.getLogger(__name__)
-
+from ..core.structured_logger import logger
 
 class FileMoverTool(BaseTool):
     """Tool for moving/renaming files with security validation and safety features."""
@@ -63,7 +60,7 @@ class FileMoverTool(BaseTool):
                 if not validated_source.is_file():
                     raise ValueError(f"Source path is not a file: {source_path}")
             
-            logger.info(f"Moving file from {validated_source} to {validated_dest}")
+            self.log_tool_call(params)
             
             # Get file stats before moving
             source_stats = validated_source.stat()
@@ -96,14 +93,14 @@ class FileMoverTool(BaseTool):
                 "timestamp": datetime.now().isoformat()
             }
             
-            logger.info(f"Successfully moved file from {validated_source} to {validated_dest}")
+            self.log_tool_result({"success": True, "source": str(source), "dest": str(dest)})
             return result
             
         except SecurityError as e:
-            logger.warning(f"Security error moving file: {e}")
+            self.log_security_violation("security_error", {"error": str(e)})
             raise ValueError(f"Security error: {e}")
         except Exception as e:
-            logger.error(f"Error moving file from {params.get('source_path')} to {params.get('destination_path')}: {e}")
+            self.log_tool_error(str(e), params)
             raise ValueError(f"File move error: {e}")
     
     async def _create_backup(self, file_path: Path) -> Path:
@@ -117,7 +114,7 @@ class FileMoverTool(BaseTool):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, shutil.copy2, str(file_path), str(backup_path))
             
-            logger.info(f"Created backup: {backup_path}")
+            self.log_tool_result({"backup_created": str(backup_path)})
             return backup_path
             
         except Exception as e:

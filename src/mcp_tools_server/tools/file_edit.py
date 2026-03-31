@@ -10,7 +10,7 @@ from .base import BaseTool
 from ..security.validator import SecurityValidator
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 
 class FileEditTool(BaseTool):
@@ -169,7 +169,7 @@ class FileEditTool(BaseTool):
         except Exception as e:
             return {"success": False, "error": f"Failed to write file: {e}"}
 
-        logger.info(f"file_edit ({operation}) {validated_path} lines {line_number}-{line_end or line_number}")
+        self.log_tool_result({"success": True, "operation": operation, "path": self._normalize_path_for_response(validated_path)})
         return {
             "success": True,
             "file_path": self._normalize_path_for_response(validated_path),

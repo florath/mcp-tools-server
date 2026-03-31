@@ -1,16 +1,13 @@
 """File reader tool for reading files with security validation."""
 
 import asyncio
-import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 import aiofiles
 
 from .base import BaseTool
+from ..core.structured_logger import logger
 from ..security.validator import SecurityError
-
-
-logger = logging.getLogger(__name__)
 
 
 class FileReaderTool(BaseTool):
@@ -41,7 +38,8 @@ class FileReaderTool(BaseTool):
             else:
                 validated_path = Path(file_path)
             
-            logger.info(f"Reading file: {validated_path}")
+            # Log tool call with structured logger
+            self.log_tool_call(params)
             
             # Read file content
             content = await self._read_file(validated_path, encoding)
@@ -63,7 +61,7 @@ class FileReaderTool(BaseTool):
             return result
             
         except SecurityError as e:
-            logger.warning(f"Security error reading file: {e}")
+            self.log_security_violation("security_error", {"error": str(e)})
             # Provide clearer error messages for common cases
             if "does not exist" in str(e).lower():
                 raise ValueError(f"File not found: {params.get('file_path')}")
@@ -72,7 +70,7 @@ class FileReaderTool(BaseTool):
             else:
                 raise ValueError(f"Security error: {e}")
         except Exception as e:
-            logger.error(f"Error reading file {params.get('file_path')}: {e}")
+            self.log_tool_error(str(e), params)
             raise ValueError(f"File reading error: {e}")
     
     async def _read_file(self, file_path: Path, encoding: str) -> str:
@@ -83,7 +81,7 @@ class FileReaderTool(BaseTool):
             return content
         except UnicodeDecodeError as e:
             # Try with fallback encoding
-            logger.warning(f"Failed to read with {encoding}, trying latin-1: {e}")
+            self.log_tool_error(f"Encoding issue: {e}", {"encoding": encoding})
             async with aiofiles.open(file_path, 'r', encoding='latin-1') as f:
                 content = await f.read()
             return content

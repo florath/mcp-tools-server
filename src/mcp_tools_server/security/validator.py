@@ -1,6 +1,5 @@
 """Security validator for file operations and path validation."""
 
-import logging
 import os
 from contextvars import ContextVar, Token
 from pathlib import Path
@@ -10,7 +9,7 @@ from pathvalidate import validate_filename
 from ..core.config import SecurityConfig
 
 
-logger = logging.getLogger(__name__)
+from ..core.structured_logger import logger
 
 # Per-async-task context variable for the active session directory.
 # Using ContextVar makes concurrent requests safe: each asyncio task

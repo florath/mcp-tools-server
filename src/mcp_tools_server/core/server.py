@@ -37,11 +37,6 @@ class MCPToolsServer:
         # Initialize security validator
         self.security_validator = SecurityValidator(config.security)
         
-        # Set allowed directory from config for session-less operations
-        if config.security.allowed_directory:
-            self.security_validator.set_allowed_directory(Path(config.security.allowed_directory))
-            logger.info(f"Security: Allowed directory set to {config.security.allowed_directory}")
-        
         # Initialize tool registry
         self.tool_registry = ToolRegistry(config, self.security_validator)
 
@@ -72,24 +67,24 @@ class MCPToolsServer:
         async def session_middleware(request: Request, call_next):
             # Extract session ID from headers
             session_id = request.headers.get("X-MCP-Session-ID")
-            
+
+            token = None
             if session_id:
                 # Look up session directory
                 session_directory = await self.session_manager.get_session_directory(session_id)
                 if session_directory:
                     logger.debug(f"Setting session directory for request: {session_directory}")
-                    # Set session directory on security validator for this request
-                    self.security_validator.set_session_directory(session_directory)
+                    token = self.security_validator.set_session_directory(session_directory)
                 else:
                     logger.warning(f"Session not found or expired: {session_id}")
-            
+
             try:
                 response = await call_next(request)
                 return response
             finally:
-                # Clean up session context after request
-                if session_id:
-                    self.security_validator.set_session_directory(None)
+                # Restore previous session context (ContextVar token-based reset)
+                if token is not None:
+                    self.security_validator.reset_session_directory(token)
     
     def _setup_routes(self):
         """Setup routes for all tools."""
@@ -247,7 +242,7 @@ class MCPToolsServer:
             if method == "tools/call":
                 tool_name: str = params.get("name", "")
                 arguments: Dict[str, Any] = params.get("arguments") or {}
-                
+
                 logger.info(f"MCP tools/call: {tool_name}",
                            tool_name=tool_name,
                            operation="mcp_tool_call",
@@ -260,6 +255,15 @@ class MCPToolsServer:
                         "id": msg_id,
                         "error": {"code": -32602, "message": f"Tool not found: {tool_name}"},
                     })
+
+                # Resolve session directory for this MCP session and activate it
+                # so the security validator scopes access correctly.
+                sec_token = None
+                if mcp_session_id and mcp_session_id in self._mcp_sessions:
+                    rest_session_id = self._mcp_sessions[mcp_session_id]
+                    session_dir = await self.session_manager.get_session_directory(rest_session_id)
+                    if session_dir:
+                        sec_token = self.security_validator.set_session_directory(session_dir)
 
                 try:
                     result = await tool_instance.execute(arguments)
@@ -276,6 +280,9 @@ class MCPToolsServer:
                         "id": msg_id,
                         "error": {"code": -32603, "message": str(exc)},
                     })
+                finally:
+                    if sec_token is not None:
+                        self.security_validator.reset_session_directory(sec_token)
 
             # --- notifications (no response body needed) ---
             if msg_id is None:

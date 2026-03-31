@@ -17,7 +17,6 @@ class SecurityConfig(BaseModel):
     """Security configuration."""
     max_file_size_mb: int = 100
     allowed_file_extensions: List[str] = Field(default_factory=list)
-    allowed_directory: str = Field(default="", description="Base directory for file operations when not using sessions")
 
 
 class LoggingConfig(BaseModel):

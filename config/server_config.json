@@ -5,13 +5,13 @@
         "debug": true
     },
     "security": {
-        "allowed_directory": "/home/florath/devel/VLLM-PROXY",
         "max_file_size_mb": 100,
         "allowed_file_extensions": [
             ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
             ".md", ".csv", ".xml", ".html", ".css", ".sql", ".toml",
             ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile", 
-            ".dockerignore", ".gitignore", ".env", ".lock"
+            ".dockerignore", ".gitignore", ".env", ".lock", ".rs",
+	    ".log"
         ]
     },
     "sessions": {

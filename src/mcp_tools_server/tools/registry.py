@@ -97,7 +97,7 @@ class ToolRegistry:
             )
             logger.server_event("Loaded directory_exists tool")
 
-        # Load file_edit tool (simplified from file_editor)
+        # Load file_edit tool (exact-string replacement)
         if getattr(self.config.tools, 'file_editor', {}).get('enabled', True):
             self.tools['file_edit'] = FileEditTool(
                 security_validator=self.security_validator

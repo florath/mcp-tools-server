@@ -100,9 +100,9 @@ class PythonRunnerTool(BaseTool):
                     }
             else:
                 # Use session directory as default working directory
-                if self.security_validator._session_directory:
-                    work_dir = self.security_validator._session_directory
-                else:
+                try:
+                    work_dir = self.security_validator.get_effective_base_directory()
+                except Exception:
                     return {
                         "success": False,
                         "error": "No active session. Python runner requires a valid session directory."

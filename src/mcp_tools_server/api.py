@@ -48,8 +48,6 @@ class MCPServerManager:
         """
         Start MCP Tools Server programmatically.
 
-        NOTE: This server uses session-based access only. All file operations
-        require a valid session to be created through the /sessions API.
 
         Args:
             port: Port to run server on
@@ -106,7 +104,6 @@ class MCPServerManager:
             for _ in range(max_wait * 10):  # Check every 100ms
                 if self._running:
                     self.logger.info(f"MCP Tools Server started on {host}:{port}")
-                    self.logger.info("Session-based access only - use /sessions API")
                     return True
                 time.sleep(0.1)
                 
@@ -179,7 +176,6 @@ class MCPServerManager:
                 "port": self.config.server.port,
                 "max_file_size_mb": self.config.security.max_file_size_mb,
                 "debug": self.config.server.debug,
-                "access_mode": "session-based"
             }
         }
     
@@ -249,7 +245,6 @@ async def managed_mcp_server(
     """
     Async context manager for MCP Tools Server.
 
-    NOTE: Server uses session-based access only. Create sessions via /sessions API.
 
     Args:
         port: Port to run server on
@@ -261,9 +256,7 @@ async def managed_mcp_server(
 
     Example:
         async with managed_mcp_server(7092) as server:
-            # Server is running with session-based access
             status = server.get_status()
-            # Create sessions via POST /sessions
         # Server is automatically stopped
     """
     manager = MCPServerManager()

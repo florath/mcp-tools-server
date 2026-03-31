@@ -72,7 +72,6 @@ def main():
     setup_logging(config)
     
     logger.server_event(f"Starting MCP Tools Server on {config.server.host}:{config.server.port}")
-    logger.server_event("Security: Session-based access only")
     
     # Create server
     try:

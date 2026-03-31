@@ -63,20 +63,18 @@ class FileWriterTool(BaseTool):
                 
                 # Additional security check: ensure parent directory creation
                 # doesn't escape the session directory
-                if self.security_validator and hasattr(self.security_validator, '_session_directory'):
-                    session_dir = self.security_validator._session_directory
-                    if session_dir:
-                        try:
-                            if not parent_dir.is_relative_to(session_dir):
-                                raise SecurityError(
-                                    "Cannot create directory outside session directory"
-                                )
-                        except ValueError:
-                            # Fallback for different filesystems
-                            if not str(parent_dir).startswith(str(session_dir)):
-                                raise SecurityError(
-                                    "Cannot create directory outside session directory"
-                                )
+                if self.security_validator:
+                    session_dir = self.security_validator.get_effective_base_directory()
+                    try:
+                        if not parent_dir.is_relative_to(session_dir):
+                            raise SecurityError(
+                                "Cannot create directory outside session directory"
+                            )
+                    except ValueError:
+                        if not str(parent_dir).startswith(str(session_dir)):
+                            raise SecurityError(
+                                "Cannot create directory outside session directory"
+                            )
                 
                 parent_dir.mkdir(parents=True, exist_ok=True)
             

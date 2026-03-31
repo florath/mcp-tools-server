@@ -126,10 +126,8 @@ class BaseTool(ABC):
         if not self.security_validator:
             return str(path)
         
-        # Get session directory or effective base directory
-        session_dir = getattr(self.security_validator, '_session_directory', None)
-        base_dir = session_dir or self.security_validator.get_effective_base_directory()
-        
+        base_dir = self.security_validator.get_effective_base_directory()
+
         if base_dir:
             try:
                 relative_path = str(path.relative_to(base_dir))

@@ -2,6 +2,7 @@
 
 import logging
 import os
+from contextvars import ContextVar, Token
 from pathlib import Path
 from typing import List, Optional
 from pathvalidate import validate_filename
@@ -11,6 +12,13 @@ from ..core.config import SecurityConfig
 
 logger = logging.getLogger(__name__)
 
+# Per-async-task context variable for the active session directory.
+# Using ContextVar makes concurrent requests safe: each asyncio task
+# (i.e. each HTTP request) has its own independent copy of this value.
+_session_directory_ctx: ContextVar[Optional[Path]] = ContextVar(
+    "mcp_session_directory", default=None
+)
+
 
 class SecurityError(Exception):
     """Security validation error."""
@@ -19,28 +27,29 @@ class SecurityError(Exception):
 
 class SecurityValidator:
     """Validates file operations against security policies."""
-    
+
     def __init__(self, security_config: SecurityConfig):
         self.config = security_config
         self.max_file_size_bytes = security_config.max_file_size_mb * 1024 * 1024
-        self._session_directory: Optional[Path] = None
-        self._allowed_directory: Optional[Path] = None
-    
-    def set_session_directory(self, session_directory: Optional[Path]) -> None:
-        """Set session directory for current request context."""
-        self._session_directory = session_directory
-    
-    def set_allowed_directory(self, allowed_directory: Optional[Path]) -> None:
-        """Set allowed directory for file operations when not using sessions."""
-        self._allowed_directory = allowed_directory.resolve() if allowed_directory else None
+
+    def set_session_directory(self, session_directory: Optional[Path]) -> Token:
+        """Set session directory for the current async context.
+
+        Returns the ContextVar Token so the caller can reset it via
+        ``reset_session_directory(token)`` in a finally block.
+        """
+        return _session_directory_ctx.set(session_directory)
+
+    def reset_session_directory(self, token: Token) -> None:
+        """Restore the session directory to its previous value."""
+        _session_directory_ctx.reset(token)
 
     def get_effective_base_directory(self) -> Path:
-        """Get the effective base directory (session dir or allowed directory)."""
-        if self._session_directory:
-            return self._session_directory
-        if self._allowed_directory:
-            return self._allowed_directory
-        raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
+        """Get the effective base directory for the current session."""
+        session_dir = _session_directory_ctx.get()
+        if session_dir:
+            return session_dir
+        raise SecurityError("No active session. All operations require a valid session.")
     
     def validate_file_path(self, file_path: str) -> Path:
         """Validate file path against security policies."""
@@ -131,18 +140,14 @@ class SecurityValidator:
             raise SecurityError(f"Filename validation error: {e}")
     
     def _is_path_allowed(self, path: Path) -> bool:
-        """Check if path is within the session directory or allowed directory."""
-        if self._session_directory:
+        """Check if path is within the active session directory."""
+        session_dir = _session_directory_ctx.get()
+        if session_dir:
             try:
-                return path.is_relative_to(self._session_directory)
+                return path.is_relative_to(session_dir)
             except ValueError:
-                return str(path).startswith(str(self._session_directory))
-        if self._allowed_directory:
-            try:
-                return path.is_relative_to(self._allowed_directory)
-            except ValueError:
-                return str(path).startswith(str(self._allowed_directory))
-        raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
+                return str(path).startswith(str(session_dir))
+        raise SecurityError("No active session. All operations require a valid session.")
     
     def _is_extension_allowed(self, path: Path) -> bool:
         """Check if file extension is allowed."""
@@ -174,7 +179,7 @@ class SecurityValidator:
         path = Path(path_str)
 
         # Check if we have session directory or allowed directory
-        base_dir = self._session_directory or self._allowed_directory
+        base_dir = _session_directory_ctx.get()
         if not base_dir:
             raise SecurityError("No active session or allowed directory. All operations require a valid session directory or allowed directory configuration.")
 
@@ -210,23 +215,17 @@ class SecurityValidator:
     
     def get_security_info(self) -> dict:
         """Get current security configuration info."""
+        session_dir = _session_directory_ctx.get()
         return {
-            "session_directory": str(self._session_directory) if self._session_directory else None,
-            "allowed_directory": str(self._allowed_directory) if self._allowed_directory else None,
+            "session_directory": str(session_dir) if session_dir else None,
             "max_file_size_mb": self.config.max_file_size_mb,
-            "allowed_extensions": self.config.allowed_file_extensions
+            "allowed_extensions": self.config.allowed_file_extensions,
         }
     
     def _get_context_info(self) -> str:
         """Get context information for error messages."""
-        if self._session_directory:
-            # Only show the last part of the path to avoid exposing absolute paths
-            dir_name = self._session_directory.name
-            return f" in session directory '{dir_name}'"
-        if self._allowed_directory:
-            dir_name = self._allowed_directory.name
-            return f" in allowed directory '{dir_name}'"
-        return " (no active session)"
+        session_dir = _session_directory_ctx.get()
+        return f" in session directory '{session_dir.name}'" if session_dir else " (no active session)"
     
     def _get_available_directories_info(self) -> str:
         """Get information about available directories for error messages."""

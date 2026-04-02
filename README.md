@@ -7,9 +7,35 @@ A secure HTTP server implementing MCP (Model Context Protocol) for meta-cognitiv
 - **Modular tool architecture** - Each tool is a separate module loaded at startup
 - **Security-first design** - Directory access restrictions and file validation
 - **HTTP API** - RESTful endpoints for each tool (e.g., `/file_reader/v1`)
+- **MCP JSON-RPC** - Support for MCP JSON-RPC 2.0 protocol via `/` or `/mcp` endpoints
 - **Session management** - Transparent stage isolation for concurrent workflows
 - **MCP compliant** - Follows Model Context Protocol standards
 - **Configurable** - JSON configuration for security, tools, and server settings
+
+## Available Tools
+
+The server provides the following tools (14 total):
+
+### File Operations
+- **file_reader** - Read files with security validation
+- **file_writer** - Create or overwrite files with security validation
+- **file_remover** - Remove files with security validation
+- **file_mover** - Move or rename files with security validation
+- **file_edit** - Edit files using line-number based operations (edit, insert, delete)
+- **file_finder** - Find files and directories by name patterns
+
+### Directory Operations
+- **directory_list** - List contents of a directory
+- **directory_create** - Create a new directory
+- **directory_remove** - Remove a directory
+- **directory_exists** - Check if a directory exists
+
+### Python Development
+- **python_linter** - Run Python linters (Ruff, MyPy, Bandit) on Python files
+- **python_runner** - Execute Python code or scripts with security restrictions
+
+### Analysis
+- **content_searcher** - Search for text patterns within files in allowed directories
 
 ## Architecture
 
@@ -84,6 +110,16 @@ mcp-tools-server --config config/server_config.json
 - **Session Statistics**: `GET /sessions/stats` - Get session manager statistics
   - Returns: Active session count, limits, and cleanup status
 
+### MCP JSON-RPC Endpoints
+
+- **POST /** - MCP JSON-RPC 2.0 endpoint (root path)
+- **POST /mcp** - MCP JSON-RPC 2.0 endpoint (conventional path)
+
+Supported MCP methods:
+- `initialize` - Initialize MCP connection and get server capabilities
+- `tools/list` - List all available tools
+- `tools/call` - Call a specific tool with parameters
+
 ### Tools
 
 #### file_reader
@@ -121,6 +157,13 @@ mcp-tools-server --config config/server_config.json
   - `create_parents`: Create parent directories if needed (create only, default: true)
   - `force_remove`: Force remove non-empty directories (remove only, default: false)
 
+Note: The `directory_manager` tool has been split into four separate tools:
+- `directory_list` - List directory contents
+- `directory_create` - Create a directory
+- `directory_remove` - Remove a directory
+- `directory_exists` - Check if a directory exists
+
+
 #### file_editor
 - **Endpoint**: `POST /file_editor/v1`
 - **Purpose**: Edit files using line-number based operations (edit, insert, delete)
@@ -132,6 +175,9 @@ mcp-tools-server --config config/server_config.json
   - `old_content`: Expected old content for verification (edit/delete operations)
   - `new_content`: New content to insert or replace with (edit/insert operations)
   - `encoding`: File encoding (default: utf-8)
+
+Note: The `file_editor` tool is now implemented as `file_edit` with the same functionality.
+
 
 ## Configuration
 
@@ -163,9 +209,17 @@ The server is configured via a JSON configuration file. Here's the complete stru
   "tools": {
     "file_reader": {"enabled": true},
     "file_writer": {"enabled": true},
+    "file_remover": {"enabled": true},
+    "file_mover": {"enabled": true},
     "python_linter": {"enabled": true},
-    "directory_manager": {"enabled": true},
-    "file_editor": {"enabled": true}
+    "directory_list": {"enabled": true},
+    "directory_create": {"enabled": true},
+    "directory_remove": {"enabled": true},
+    "directory_exists": {"enabled": true},
+    "file_edit": {"enabled": true},
+    "file_finder": {"enabled": true},
+    "content_searcher": {"enabled": true},
+    "python_runner": {"enabled": true}
   }
 }
 ```
@@ -222,21 +276,21 @@ The server is configured via a JSON configuration file. Here's the complete stru
 
 7. **Create a directory**:
    ```bash
-   curl -X POST http://localhost:7091/directory_manager/v1 \
+   curl -X POST http://localhost:7091/directory_list/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "create", "directory_path": "/tmp/workspace/new_folder"}'
    ```
 
 8. **List directory contents**:
    ```bash
-   curl -X POST http://localhost:7091/directory_manager/v1 \
+   curl -X POST http://localhost:7091/directory_list/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "list", "directory_path": "/tmp/workspace"}'
    ```
 
 9. **Edit a specific line in a file**:
    ```bash
-   curl -X POST http://localhost:7091/file_editor/v1 \
+   curl -X POST http://localhost:7091/file_edit/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "edit", "file_path": "/tmp/workspace/script.py", "line_number": 5, "old_content": "old line", "new_content": "new line"}'
    ```
@@ -268,7 +322,7 @@ The server is configured via a JSON configuration file. Here's the complete stru
       -d '{"file_path": "data/config.json", "reason": "Reading config in session"}'
     
     # Create directory within session
-    curl -X POST http://localhost:7091/directory_manager/v1 \
+    curl -X POST http://localhost:7091/directory_list/v1 \
       -H "Content-Type: application/json" \
       -H "X-MCP-Session-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
       -d '{"operation": "create", "directory_path": "output", "reason": "Creating output dir"}'

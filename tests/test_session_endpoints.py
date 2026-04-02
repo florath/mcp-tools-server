@@ -193,7 +193,7 @@ class TestSessionEndpoints:
 class TestSessionIntegration:
     """Integration tests for session functionality with tools."""
     
-    def test_file_reader_with_session(self, client, temp_directory):
+    def test_read_file_with_session(self, client, temp_directory):
         """Test file reader tool with session context."""
         # Create test file in session directory
         test_file = Path(temp_directory) / "test.txt"
@@ -206,7 +206,7 @@ class TestSessionIntegration:
         # Use file reader with session header
         headers = {"X-MCP-Session-ID": session_id}
         file_response = client.post(
-            "/file_reader/v1",
+            "/read_file/v1",
             json={
                 "file_path": "test.txt",
                 "reason": "Testing session-aware file reading"
@@ -219,7 +219,7 @@ class TestSessionIntegration:
         assert data["success"] is True
         assert data["result"]["content"] == "Hello from session!"
     
-    def test_file_reader_without_session_header(self, client, temp_directory):
+    def test_read_file_without_session_header(self, client, temp_directory):
         """Test file reader tool without session header (should use default security)."""
         # Create test file in session directory
         test_file = Path(temp_directory) / "test.txt"
@@ -227,7 +227,7 @@ class TestSessionIntegration:
         
         # Try to read file without session (should fail if not in allowed directory)
         file_response = client.post(
-            "/file_reader/v1",
+            "/read_file/v1",
             json={
                 "file_path": str(test_file),
                 "reason": "Testing non-session file reading"
@@ -248,7 +248,7 @@ class TestSessionIntegration:
         # Use file reader with invalid session header
         headers = {"X-MCP-Session-ID": "invalid-session-id"}
         file_response = client.post(
-            "/file_reader/v1",
+            "/read_file/v1",
             json={
                 "file_path": "test.txt",
                 "reason": "Testing with invalid session ID"

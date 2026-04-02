@@ -527,7 +527,7 @@ class MCPToolsServer:
     
     def _get_example_request(self, tool_name: str, tool_instance: Any) -> Dict[str, Any]:
         """Generate example request for a tool."""
-        if tool_name == "file_reader":
+        if tool_name == "read_file":
             return {
                 "file_path": "/tmp/workspace/example.json",
                 "encoding": "utf-8",

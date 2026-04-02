@@ -6,7 +6,7 @@ A secure HTTP server implementing MCP (Model Context Protocol) for meta-cognitiv
 
 - **Modular tool architecture** - Each tool is a separate module loaded at startup
 - **Security-first design** - Directory access restrictions and file validation
-- **HTTP API** - RESTful endpoints for each tool (e.g., `/file_reader/v1`)
+- **HTTP API** - RESTful endpoints for each tool (e.g., `/read_file/v1`)
 - **MCP JSON-RPC** - Support for MCP JSON-RPC 2.0 protocol via `/` or `/mcp` endpoints
 - **Session management** - Transparent stage isolation for concurrent workflows
 - **MCP compliant** - Follows Model Context Protocol standards
@@ -17,21 +17,21 @@ A secure HTTP server implementing MCP (Model Context Protocol) for meta-cognitiv
 The server provides the following tools (11 total):
 
 ### File Operations
-- **file_reader** - Read files with security validation
-- **file_writer** - Create or overwrite files with security validation
-- **file_remover** - Remove files with security validation
-- **file_mover** - Move or rename files with security validation
-- **file_edit** - Edit files using line-number based operations (edit, insert, delete)
-- **file_finder** - Find files and directories by name patterns
+- **read_file** - Read files with security validation
+- **write_file** - Create or overwrite files with security validation
+- **remove_file** - Remove files with security validation
+- **move_file** - Move or rename files with security validation
+- **edit_file** - Edit files using line-number based operations (edit, insert, delete)
+- **find_files** - Find files and directories by name patterns
 
 ### Directory Operations
-- **directory_list** - List contents of a directory
-- **directory_create** - Create a new directory
-- **directory_remove** - Remove a directory
-- **directory_exists** - Check if a directory exists
+- **list_dir** - List contents of a directory
+- **mkdir** - Create a new directory
+- **rmdir** - Remove a directory
+- **dir_exists** - Check if a directory exists
 
 ### Analysis
-- **content_searcher** - Search for text patterns within files in allowed directories
+- **search_content** - Search for text patterns within files in allowed directories
 
 ## Architecture
 
@@ -118,16 +118,16 @@ Supported MCP methods:
 
 ### Tools
 
-#### file_reader
-- **Endpoint**: `POST /file_reader/v1`
+#### read_file
+- **Endpoint**: `POST /read_file/v1`
 - **Purpose**: Read files with security validation
 - **Parameters**:
   - `file_path`: Path to file to read
   - `encoding`: File encoding (default: utf-8)
   - `include_line_numbers`: Include line numbers (default: false)
 
-#### file_writer
-- **Endpoint**: `POST /file_writer/v1`
+#### write_file
+- **Endpoint**: `POST /write_file/v1`
 - **Purpose**: Create or overwrite files with security validation
 - **Parameters**:
   - `file_path`: Path to file to create/overwrite
@@ -135,37 +135,37 @@ Supported MCP methods:
   - `encoding`: File encoding (default: utf-8)
   - `create_dirs`: Create parent directories if needed (default: true)
 
-#### directory_list
-- **Endpoint**: `POST /directory_list/v1`
+#### list_dir
+- **Endpoint**: `POST /list_dir/v1`
 - **Purpose**: List contents of a directory
 - **Parameters**:
   - `directory_path`: Path to the directory
   - `reason`: Reason for the operation
 
-#### directory_create
-- **Endpoint**: `POST /directory_create/v1`
+#### mkdir
+- **Endpoint**: `POST /mkdir/v1`
 - **Purpose**: Create a new directory
 - **Parameters**:
   - `directory_path`: Path to the directory to create
   - `reason`: Reason for the operation
 
-#### directory_remove
-- **Endpoint**: `POST /directory_remove/v1`
+#### rmdir
+- **Endpoint**: `POST /rmdir/v1`
 - **Purpose`: Remove a directory
 - **Parameters**:
   - `directory_path`: Path to the directory to remove
   - `force`: Force remove non-empty directories (default: false)
   - `reason`: Reason for the operation
 
-#### directory_exists
-- **Endpoint**: `POST /directory_exists/v1`
+#### dir_exists
+- **Endpoint**: `POST /dir_exists/v1`
 - **Purpose**: Check if a directory exists
 - **Parameters**:
   - `directory_path`: Path to the directory to check
   - `reason`: Reason for the operation
 
-#### file_edit
-- **Endpoint**: `POST /file_edit/v1`
+#### edit_file
+- **Endpoint**: `POST /edit_file/v1`
 - **Purpose**: Edit files using line-number based operations (edit, insert, delete)
 - **Parameters**:
   - `file_path`: Path to the file to edit
@@ -177,29 +177,29 @@ Supported MCP methods:
   - `encoding`: File encoding (default: utf-8)
   - `reason`: Reason for the operation
 
-#### file_finder
-- **Endpoint**: `POST /file_finder/v1`
+#### find_files
+- **Endpoint**: `POST /find_files/v1`
 - **Purpose`: Find files and directories by name patterns
 - **Parameters**:
   - `pattern`: Pattern to search for (e.g., '*.py', 'test_*')
   - `reason`: Reason for the operation
 
-#### content_searcher
-- **Endpoint**: `POST /content_searcher/v1`
+#### search_content
+- **Endpoint**: `POST /search_content/v1`
 - **Purpose**: Search for text patterns within files in allowed directories
 - **Parameters**:
   - `search_term`: Text pattern to search for
   - `reason`: Reason for the operation
 
-#### file_remover
-- **Endpoint**: `POST /file_remover/v1`
+#### remove_file
+- **Endpoint**: `POST /remove_file/v1`
 - **Purpose**: Remove files with security validation
 - **Parameters**:
   - `file_path`: Path to the file to remove
   - `reason`: Reason for the operation
 
-#### file_mover
-- **Endpoint**: `POST /file_mover/v1`
+#### move_file
+- **Endpoint**: `POST /move_file/v1`
 - **Purpose`: Move or rename files with security validation
 - **Parameters**:
   - `source_path`: Path to the source file
@@ -234,17 +234,17 @@ The server is configured via a JSON configuration file. Here's the complete stru
     "format": "json"
   },
   "tools": {
-    "file_reader": {"enabled": true},
-    "file_writer": {"enabled": true},
-    "file_remover": {"enabled": true},
-    "file_mover": {"enabled": true},
-    "directory_list": {"enabled": true},
-    "directory_create": {"enabled": true},
-    "directory_remove": {"enabled": true},
-    "directory_exists": {"enabled": true},
-    "file_edit": {"enabled": true},
-    "file_finder": {"enabled": true},
-    "content_searcher": {"enabled": true}
+    "read_file": {"enabled": true},
+    "write_file": {"enabled": true},
+    "remove_file": {"enabled": true},
+    "move_file": {"enabled": true},
+    "list_dir": {"enabled": true},
+    "mkdir": {"enabled": true},
+    "rmdir": {"enabled": true},
+    "dir_exists": {"enabled": true},
+    "edit_file": {"enabled": true},
+    "find_files": {"enabled": true},
+    "search_content": {"enabled": true}
   }
 }
 ```
@@ -268,19 +268,19 @@ The server is configured via a JSON configuration file. Here's the complete stru
 
 2. **Get tool schema**:
    ```bash
-   curl http://localhost:7091/tools/file_reader/schema
+   curl http://localhost:7091/tools/read_file/schema
    ```
 
 3. **Read a file**:
    ```bash
-   curl -X POST http://localhost:7091/file_reader/v1 \
+   curl -X POST http://localhost:7091/read_file/v1 \
      -H "Content-Type: application/json" \
      -d '{"file_path": "/tmp/workspace/config.json"}'
    ```
 
 4. **Write a file**:
    ```bash
-   curl -X POST http://localhost:7091/file_writer/v1 \
+   curl -X POST http://localhost:7091/write_file/v1 \
      -H "Content-Type: application/json" \
      -d '{"file_path": "/tmp/workspace/output.txt", "content": "Hello MCP!"}'
    ```
@@ -290,21 +290,21 @@ The server is configured via a JSON configuration file. Here's the complete stru
 
 6. **Create a directory**:
    ```bash
-   curl -X POST http://localhost:7091/directory_list/v1 \
+   curl -X POST http://localhost:7091/list_dir/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "create", "directory_path": "/tmp/workspace/new_folder"}'
    ```
 
 7. **List directory contents**:
    ```bash
-   curl -X POST http://localhost:7091/directory_list/v1 \
+   curl -X POST http://localhost:7091/list_dir/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "list", "directory_path": "/tmp/workspace"}'
    ```
 
 8. **Edit a specific line in a file**:
    ```bash
-   curl -X POST http://localhost:7091/file_edit/v1 \
+   curl -X POST http://localhost:7091/edit_file/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "edit", "file_path": "/tmp/workspace/script.py", "line_number": 5, "old_content": "old line", "new_content": "new line"}'
    ```
@@ -330,13 +330,13 @@ The server is configured via a JSON configuration file. Here's the complete stru
 10. **Use tools with session context**:
     ```bash
     # Read file within session (relative path)
-    curl -X POST http://localhost:7091/file_reader/v1 \
+    curl -X POST http://localhost:7091/read_file/v1 \
       -H "Content-Type: application/json" \
       -H "X-MCP-Session-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
       -d '{"file_path": "data/config.json", "reason": "Reading config in session"}'
     
     # Create directory within session
-    curl -X POST http://localhost:7091/directory_list/v1 \
+    curl -X POST http://localhost:7091/list_dir/v1 \
       -H "Content-Type: application/json" \
       -H "X-MCP-Session-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
       -d '{"operation": "create", "directory_path": "output", "reason": "Creating output dir"}'
@@ -378,12 +378,12 @@ SESSION_2=$(curl -s -X POST http://localhost:7091/sessions \
   -d '{"directory": "/tmp/implementation-stage"}' | jq -r '.session_id')
 
 # Use tools in each stage independently
-curl -X POST http://localhost:7091/file_reader/v1 \
+curl -X POST http://localhost:7091/read_file/v1 \
   -H "Content-Type: application/json" \
   -H "X-MCP-Session-ID: $SESSION_1" \
   -d '{"file_path": "requirements.txt", "reason": "Analysis stage"}'
 
-curl -X POST http://localhost:7091/file_writer/v1 \
+curl -X POST http://localhost:7091/write_file/v1 \
   -H "Content-Type: application/json" \
   -H "X-MCP-Session-ID: $SESSION_2" \
   -d '{"file_path": "implementation.py", "content": "...", "reason": "Implementation stage"}'

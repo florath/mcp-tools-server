@@ -33,14 +33,17 @@ class SessionsConfig(BaseModel):
 
 class ToolsConfig(BaseModel):
     """Tools configuration."""
-    file_reader: Dict[str, Any] = Field(default_factory=dict)
-    file_writer: Dict[str, Any] = Field(default_factory=dict)
-    python_linter: Dict[str, Any] = Field(default_factory=dict)
-    directory_manager: Dict[str, Any] = Field(default_factory=dict)
-    file_editor: Dict[str, Any] = Field(default_factory=dict)
-    file_finder: Dict[str, Any] = Field(default_factory=dict)
-    content_searcher: Dict[str, Any] = Field(default_factory=dict)
-    python_runner: Dict[str, Any] = Field(default_factory=dict)
+    read_file: Dict[str, Any] = Field(default_factory=dict)
+    write_file: Dict[str, Any] = Field(default_factory=dict)
+    remove_file: Dict[str, Any] = Field(default_factory=dict)
+    move_file: Dict[str, Any] = Field(default_factory=dict)
+    edit_file: Dict[str, Any] = Field(default_factory=dict)
+    find_files: Dict[str, Any] = Field(default_factory=dict)
+    search_content: Dict[str, Any] = Field(default_factory=dict)
+    list_dir: Dict[str, Any] = Field(default_factory=dict)
+    mkdir: Dict[str, Any] = Field(default_factory=dict)
+    rmdir: Dict[str, Any] = Field(default_factory=dict)
+    dir_exists: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Config(BaseModel):

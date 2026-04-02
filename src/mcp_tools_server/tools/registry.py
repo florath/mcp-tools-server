@@ -6,17 +6,17 @@ from typing import Dict, Any, List
 from ..core.config import Config
 from ..core.structured_logger import logger
 from ..security.validator import SecurityValidator
-from .file_reader import FileReaderTool
-from .file_writer import FileWriterTool
-from .file_remover import FileRemoverTool
-from .file_mover import FileMoverTool
-from .directory_list import DirectoryListTool
-from .directory_create import DirectoryCreateTool
-from .directory_remove import DirectoryRemoveTool
-from .directory_exists import DirectoryExistsTool
-from .file_edit import FileEditTool
-from .file_finder import FileFinderTool
-from .content_searcher import ContentSearcherTool
+from .read_file import ReadFileTool
+from .write_file import WriteFileTool
+from .remove_file import RemoveFileTool
+from .move_file import MoveFileTool
+from .list_dir import ListDirTool
+from .mkdir import MkdirTool
+from .rmdir import RmdirTool
+from .dir_exists import DirExistsTool
+from .edit_file import EditFileTool
+from .find_files import FindFilesTool
+from .search_content import SearchContentTool
 # Analysis tools and python tools removed - python tools can be handled by codex directly
 
 
@@ -36,79 +36,79 @@ class ToolRegistry:
         """Load all enabled tools."""
         logger.server_event("Loading tools...")
         
-        # Load file_reader tool
-        if self.config.tools.file_reader.get('enabled', True):
-            max_files = self.config.tools.file_reader.get('max_files_per_request', 10)
-            self.tools['file_reader'] = FileReaderTool(
+        # Load read_file tool
+        if self.config.tools.read_file.get('enabled', True):
+            max_files = self.config.tools.read_file.get('max_files_per_request', 10)
+            self.tools['read_file'] = ReadFileTool(
                 security_validator=self.security_validator,
                 max_files_per_request=max_files
             )
-            logger.server_event("Loaded file_reader tool")
+            logger.server_event("Loaded read_file tool")
         
-        # Load file_writer tool
-        if getattr(self.config.tools, 'file_writer', {}).get('enabled', True):
-            self.tools['file_writer'] = FileWriterTool(
+        # Load write_file tool
+        if getattr(self.config.tools, 'write_file', {}).get('enabled', True):
+            self.tools['write_file'] = WriteFileTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded file_writer tool")
+            logger.server_event("Loaded write_file tool")
         
-        # Load file_remover tool
-        if getattr(self.config.tools, 'file_remover', {}).get('enabled', True):
-            self.tools['file_remover'] = FileRemoverTool(
+        # Load remove_file tool
+        if getattr(self.config.tools, 'remove_file', {}).get('enabled', True):
+            self.tools['remove_file'] = RemoveFileTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded file_remover tool")
+            logger.server_event("Loaded remove_file tool")
         
-        # Load file_mover tool
-        if getattr(self.config.tools, 'file_mover', {}).get('enabled', True):
-            self.tools['file_mover'] = FileMoverTool(
+        # Load move_file tool
+        if getattr(self.config.tools, 'move_file', {}).get('enabled', True):
+            self.tools['move_file'] = MoveFileTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded file_mover tool")
+            logger.server_event("Loaded move_file tool")
         
         
-        # Load directory tools (split from directory_manager)
-        if getattr(self.config.tools, 'directory_list', {}).get('enabled', True):
-            self.tools['directory_list'] = DirectoryListTool(
+        # Load directory tools
+        if getattr(self.config.tools, 'list_dir', {}).get('enabled', True):
+            self.tools['list_dir'] = ListDirTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded directory_list tool")
+            logger.server_event("Loaded list_dir tool")
 
-            self.tools['directory_create'] = DirectoryCreateTool(
+            self.tools['mkdir'] = MkdirTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded directory_create tool")
+            logger.server_event("Loaded mkdir tool")
 
-            self.tools['directory_remove'] = DirectoryRemoveTool(
+            self.tools['rmdir'] = RmdirTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded directory_remove tool")
+            logger.server_event("Loaded rmdir tool")
 
-            self.tools['directory_exists'] = DirectoryExistsTool(
+            self.tools['dir_exists'] = DirExistsTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded directory_exists tool")
+            logger.server_event("Loaded dir_exists tool")
 
-        # Load file_edit tool (exact-string replacement)
-        if getattr(self.config.tools, 'file_edit', {}).get('enabled', True):
-            self.tools['file_edit'] = FileEditTool(
+        # Load edit_file tool (exact-string replacement)
+        if getattr(self.config.tools, 'edit_file', {}).get('enabled', True):
+            self.tools['edit_file'] = EditFileTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded file_edit tool")
+            logger.server_event("Loaded edit_file tool")
         
-        # Load file_finder tool
-        if getattr(self.config.tools, 'file_finder', {}).get('enabled', True):
-            self.tools['file_finder'] = FileFinderTool(
+        # Load find_files tool
+        if getattr(self.config.tools, 'find_files', {}).get('enabled', True):
+            self.tools['find_files'] = FindFilesTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded file_finder tool")
+            logger.server_event("Loaded find_files tool")
         
-        # Load content_searcher tool
-        if getattr(self.config.tools, 'content_searcher', {}).get('enabled', True):
-            self.tools['content_searcher'] = ContentSearcherTool(
+        # Load search_content tool
+        if getattr(self.config.tools, 'search_content', {}).get('enabled', True):
+            self.tools['search_content'] = SearchContentTool(
                 security_validator=self.security_validator
             )
-            logger.server_event("Loaded content_searcher tool")
+            logger.server_event("Loaded search_content tool")
         
 
         # Analysis tools removed - they were confusing LLMs and causing them to

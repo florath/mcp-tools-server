@@ -14,7 +14,7 @@ A secure HTTP server implementing MCP (Model Context Protocol) for meta-cognitiv
 
 ## Available Tools
 
-The server provides the following tools (14 total):
+The server provides the following tools (11 total):
 
 ### File Operations
 - **file_reader** - Read files with security validation
@@ -29,10 +29,6 @@ The server provides the following tools (14 total):
 - **directory_create** - Create a new directory
 - **directory_remove** - Remove a directory
 - **directory_exists** - Check if a directory exists
-
-### Python Development
-- **python_linter** - Run Python linters (Ruff, MyPy, Bandit) on Python files
-- **python_runner** - Execute Python code or scripts with security restrictions
 
 ### Analysis
 - **content_searcher** - Search for text patterns within files in allowed directories
@@ -139,15 +135,6 @@ Supported MCP methods:
   - `encoding`: File encoding (default: utf-8)
   - `create_dirs`: Create parent directories if needed (default: true)
 
-#### python_linter
-- **Endpoint**: `POST /python_linter/v1`
-- **Purpose**: Run Python linters (Ruff, MyPy, Bandit) on Python files
-- **Parameters**:
-  - `file_path`: Path to Python file or directory to lint
-  - `linter_type`: Linter to use - 'ruff', 'mypy', 'bandit', or 'all' (default: ruff)
-  - `fix_issues`: Auto-fix issues (only supported by Ruff, default: false)
-  - `config_file`: Optional path to configuration file
-
 #### directory_list
 - **Endpoint**: `POST /directory_list/v1`
 - **Purpose**: List contents of a directory
@@ -204,13 +191,6 @@ Supported MCP methods:
   - `search_term`: Text pattern to search for
   - `reason`: Reason for the operation
 
-#### python_runner
-- **Endpoint**: `POST /python_runner/v1`
-- **Purpose**: Execute Python code or scripts with security restrictions
-- **Parameters**:
-  - `code`: Python code to execute
-  - `reason`: Reason for the operation
-
 #### file_remover
 - **Endpoint**: `POST /file_remover/v1`
 - **Purpose**: Remove files with security validation
@@ -258,15 +238,13 @@ The server is configured via a JSON configuration file. Here's the complete stru
     "file_writer": {"enabled": true},
     "file_remover": {"enabled": true},
     "file_mover": {"enabled": true},
-    "python_linter": {"enabled": true},
     "directory_list": {"enabled": true},
     "directory_create": {"enabled": true},
     "directory_remove": {"enabled": true},
     "directory_exists": {"enabled": true},
     "file_edit": {"enabled": true},
     "file_finder": {"enabled": true},
-    "content_searcher": {"enabled": true},
-    "python_runner": {"enabled": true}
+    "content_searcher": {"enabled": true}
   }
 }
 ```
@@ -307,35 +285,24 @@ The server is configured via a JSON configuration file. Here's the complete stru
      -d '{"file_path": "/tmp/workspace/output.txt", "content": "Hello MCP!"}'
    ```
 
-5. **Lint Python code**:
-   ```bash
-   curl -X POST http://localhost:7091/python_linter/v1 \
-     -H "Content-Type: application/json" \
-     -d '{"file_path": "/tmp/workspace/script.py", "linter_type": "all"}'
-   ```
+5. **Auto-fix Python code issues using codex**:
+   Codex handles Python code execution and linting directly through its execute_command tool.
 
-6. **Auto-fix Python code issues**:
-   ```bash
-   curl -X POST http://localhost:7091/python_linter/v1 \
-     -H "Content-Type: application/json" \
-     -d '{"file_path": "/tmp/workspace/script.py", "linter_type": "ruff", "fix_issues": true}'
-   ```
-
-7. **Create a directory**:
+6. **Create a directory**:
    ```bash
    curl -X POST http://localhost:7091/directory_list/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "create", "directory_path": "/tmp/workspace/new_folder"}'
    ```
 
-8. **List directory contents**:
+7. **List directory contents**:
    ```bash
    curl -X POST http://localhost:7091/directory_list/v1 \
      -H "Content-Type: application/json" \
      -d '{"operation": "list", "directory_path": "/tmp/workspace"}'
    ```
 
-9. **Edit a specific line in a file**:
+8. **Edit a specific line in a file**:
    ```bash
    curl -X POST http://localhost:7091/file_edit/v1 \
      -H "Content-Type: application/json" \
@@ -344,7 +311,7 @@ The server is configured via a JSON configuration file. Here's the complete stru
 
 ### Session-Based Workflow Examples
 
-10. **Create a session**:
+9. **Create a session**:
     ```bash
     curl -X POST http://localhost:7091/sessions \
       -H "Content-Type: application/json" \
@@ -360,7 +327,7 @@ The server is configured via a JSON configuration file. Here's the complete stru
     }
     ```
 
-11. **Use tools with session context**:
+10. **Use tools with session context**:
     ```bash
     # Read file within session (relative path)
     curl -X POST http://localhost:7091/file_reader/v1 \
@@ -375,22 +342,22 @@ The server is configured via a JSON configuration file. Here's the complete stru
       -d '{"operation": "create", "directory_path": "output", "reason": "Creating output dir"}'
     ```
 
-12. **Check session status**:
+11. **Check session status**:
     ```bash
     curl http://localhost:7091/sessions/a1b2c3d4-e5f6-7890-abcd-ef1234567890
     ```
 
-13. **List all active sessions**:
+12. **List all active sessions**:
     ```bash
     curl http://localhost:7091/sessions
     ```
 
-14. **Get session statistics**:
+13. **Get session statistics**:
     ```bash
     curl http://localhost:7091/sessions/stats
     ```
 
-15. **Clean up session**:
+14. **Clean up session**:
     ```bash
     curl -X DELETE http://localhost:7091/sessions/a1b2c3d4-e5f6-7890-abcd-ef1234567890
     ```

@@ -10,7 +10,6 @@ from .file_reader import FileReaderTool
 from .file_writer import FileWriterTool
 from .file_remover import FileRemoverTool
 from .file_mover import FileMoverTool
-from .python_linter import PythonLinterTool
 from .directory_list import DirectoryListTool
 from .directory_create import DirectoryCreateTool
 from .directory_remove import DirectoryRemoveTool
@@ -18,8 +17,7 @@ from .directory_exists import DirectoryExistsTool
 from .file_edit import FileEditTool
 from .file_finder import FileFinderTool
 from .content_searcher import ContentSearcherTool
-from .python_runner import PythonRunnerTool
-# Analysis tools removed - they were confusing LLMs and causing infinite loops
+# Analysis tools and python tools removed - python tools can be handled by codex directly
 
 
 
@@ -68,15 +66,9 @@ class ToolRegistry:
             )
             logger.server_event("Loaded file_mover tool")
         
-        # Load python_linter tool
-        if getattr(self.config.tools, 'python_linter', {}).get('enabled', True):
-            self.tools['python_linter'] = PythonLinterTool(
-                security_validator=self.security_validator
-            )
-            logger.server_event("Loaded python_linter tool")
         
         # Load directory tools (split from directory_manager)
-        if getattr(self.config.tools, 'directory_manager', {}).get('enabled', True):
+        if getattr(self.config.tools, 'directory_list', {}).get('enabled', True):
             self.tools['directory_list'] = DirectoryListTool(
                 security_validator=self.security_validator
             )
@@ -98,7 +90,7 @@ class ToolRegistry:
             logger.server_event("Loaded directory_exists tool")
 
         # Load file_edit tool (exact-string replacement)
-        if getattr(self.config.tools, 'file_editor', {}).get('enabled', True):
+        if getattr(self.config.tools, 'file_edit', {}).get('enabled', True):
             self.tools['file_edit'] = FileEditTool(
                 security_validator=self.security_validator
             )
@@ -118,12 +110,6 @@ class ToolRegistry:
             )
             logger.server_event("Loaded content_searcher tool")
         
-        # Load python_runner tool
-        if getattr(self.config.tools, 'python_runner', {}).get('enabled', True):
-            self.tools['python_runner'] = PythonRunnerTool(
-                security_validator=self.security_validator
-            )
-            logger.server_event("Loaded python_runner tool")
 
         # Analysis tools removed - they were confusing LLMs and causing them to
         # add conflicts instead of resolving them

@@ -44,7 +44,7 @@ class MCPToolsServer:
         self._mcp_sessions: Dict[str, str] = {}
         
         # Track registered capabilities per session
-        self._registered_capabilities: Dict[str, Dict[str, Any]] = {}
+
 
         self._setup_middleware()
         self._setup_routes()

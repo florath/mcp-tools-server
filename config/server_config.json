@@ -11,7 +11,7 @@
             ".md", ".csv", ".xml", ".html", ".css", ".sql", ".toml",
             ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile", 
             ".dockerignore", ".gitignore", ".env", ".lock", ".rs",
-	    ".log"
+	    ".log", ".toml"
         ]
     },
     "sessions": {

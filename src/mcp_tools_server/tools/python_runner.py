@@ -156,15 +156,18 @@ class PythonRunnerTool(BaseTool):
             if code:
                 # Create temporary file for code execution
                 temp_file = tempfile.NamedTemporaryFile(
-                    mode='w', suffix='.py', delete=False, 
+                    mode='w', suffix='.py', delete=False,
                     dir=str(working_directory) if working_directory else None
                 )
-                temp_file.write(code)
-                temp_file.flush()
-                temp_file.close()
-                
-                cmd.append(temp_file.name)
-                script_used = temp_file.name
+                try:
+                    temp_file.write(code)
+                    temp_file.flush()
+                    temp_file.close()
+                    script_used = temp_file.name
+                    cmd.append(script_used)
+                except Exception:
+                    temp_file.close()
+                    raise
             else:
                 cmd.append(str(script_path))
                 script_used = str(script_path)

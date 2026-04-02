@@ -138,3 +138,11 @@ class BaseTool(ABC):
         else:
             # No base directory available - return just the filename
             return path.name
+
+    def get_info(self) -> Dict[str, Any]:
+        """Get basic information about the tool for registry purposes."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "schema_endpoint": f"/tools/{self.name}/schema",
+        }

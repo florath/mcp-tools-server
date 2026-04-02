@@ -148,24 +148,37 @@ Supported MCP methods:
   - `fix_issues`: Auto-fix issues (only supported by Ruff, default: false)
   - `config_file`: Optional path to configuration file
 
-#### directory_manager
-- **Endpoint**: `POST /directory_manager/v1`
-- **Purpose**: Create, remove, and list directories with security validation
+#### directory_list
+- **Endpoint**: `POST /directory_list/v1`
+- **Purpose**: List contents of a directory
 - **Parameters**:
-  - `operation`: Operation to perform - 'create', 'remove', or 'list'
   - `directory_path`: Path to the directory
-  - `create_parents`: Create parent directories if needed (create only, default: true)
-  - `force_remove`: Force remove non-empty directories (remove only, default: false)
+  - `reason`: Reason for the operation
 
-Note: The `directory_manager` tool has been split into four separate tools:
-- `directory_list` - List directory contents
-- `directory_create` - Create a directory
-- `directory_remove` - Remove a directory
-- `directory_exists` - Check if a directory exists
+#### directory_create
+- **Endpoint**: `POST /directory_create/v1`
+- **Purpose**: Create a new directory
+- **Parameters**:
+  - `directory_path`: Path to the directory to create
+  - `reason`: Reason for the operation
 
+#### directory_remove
+- **Endpoint**: `POST /directory_remove/v1`
+- **Purpose`: Remove a directory
+- **Parameters**:
+  - `directory_path`: Path to the directory to remove
+  - `force`: Force remove non-empty directories (default: false)
+  - `reason`: Reason for the operation
 
-#### file_editor
-- **Endpoint**: `POST /file_editor/v1`
+#### directory_exists
+- **Endpoint**: `POST /directory_exists/v1`
+- **Purpose**: Check if a directory exists
+- **Parameters**:
+  - `directory_path`: Path to the directory to check
+  - `reason`: Reason for the operation
+
+#### file_edit
+- **Endpoint**: `POST /file_edit/v1`
 - **Purpose**: Edit files using line-number based operations (edit, insert, delete)
 - **Parameters**:
   - `file_path`: Path to the file to edit
@@ -175,9 +188,43 @@ Note: The `directory_manager` tool has been split into four separate tools:
   - `old_content`: Expected old content for verification (edit/delete operations)
   - `new_content`: New content to insert or replace with (edit/insert operations)
   - `encoding`: File encoding (default: utf-8)
+  - `reason`: Reason for the operation
 
-Note: The `file_editor` tool is now implemented as `file_edit` with the same functionality.
+#### file_finder
+- **Endpoint**: `POST /file_finder/v1`
+- **Purpose`: Find files and directories by name patterns
+- **Parameters**:
+  - `pattern`: Pattern to search for (e.g., '*.py', 'test_*')
+  - `reason`: Reason for the operation
 
+#### content_searcher
+- **Endpoint**: `POST /content_searcher/v1`
+- **Purpose**: Search for text patterns within files in allowed directories
+- **Parameters**:
+  - `search_term`: Text pattern to search for
+  - `reason`: Reason for the operation
+
+#### python_runner
+- **Endpoint**: `POST /python_runner/v1`
+- **Purpose**: Execute Python code or scripts with security restrictions
+- **Parameters**:
+  - `code`: Python code to execute
+  - `reason`: Reason for the operation
+
+#### file_remover
+- **Endpoint**: `POST /file_remover/v1`
+- **Purpose**: Remove files with security validation
+- **Parameters**:
+  - `file_path`: Path to the file to remove
+  - `reason`: Reason for the operation
+
+#### file_mover
+- **Endpoint**: `POST /file_mover/v1`
+- **Purpose`: Move or rename files with security validation
+- **Parameters**:
+  - `source_path`: Path to the source file
+  - `destination_path`: Path to the destination
+  - `reason`: Reason for the operation
 
 ## Configuration
 

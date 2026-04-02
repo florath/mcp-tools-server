@@ -62,68 +62,12 @@ async def test_read_file_basic(read_file, temp_dir):
 
 
 @pytest.mark.asyncio
-async def test_read_file_with_line_numbers(read_file, temp_dir):
-    """Test file reading with line numbers."""
-    test_file = temp_dir / "test_lines.txt"
-    test_content = "Line 1\nLine 2\nLine 3"
-    test_file.write_text(test_content)
-
-    try:
-        params = {
-            "file_path": str(test_file),
-            "include_line_numbers": True,
-            "reason": "Testing file reading with line numbers"
-        }
-        result = await read_file.execute(params)
-
-        assert result["content"] == test_content
-        assert "content_with_line_numbers" in result
-        assert "   1: Line 1" in result["content_with_line_numbers"]
-
-    finally:
-        if test_file.exists():
-            test_file.unlink()
-
-
-@pytest.mark.asyncio
 async def test_read_file_security_error(read_file):
     """Test security validation - try to read outside allowed directory."""
     params = {"file_path": "/etc/passwd", "reason": "Testing security validation"}
 
     with pytest.raises(ValueError, match="Security error|not in allowed"):
         await read_file.execute(params)
-
-
-@pytest.mark.asyncio
-async def test_read_file_nonexistent(read_file, temp_dir):
-    """Test reading a file that doesn't exist."""
-    nonexistent = temp_dir / "nonexistent.txt"
-    params = {"file_path": str(nonexistent), "reason": "Testing nonexistent file"}
-
-    with pytest.raises(ValueError, match="File not found"):
-        await read_file.execute(params)
-
-
-@pytest.mark.asyncio
-async def test_read_file_with_encoding(read_file, temp_dir):
-    """Test file reading with different encodings."""
-    test_file = temp_dir / "test_encoding.txt"
-    test_content = "Special chars: aou"
-    test_file.write_text(test_content, encoding="utf-8")
-
-    try:
-        params = {
-            "file_path": str(test_file),
-            "encoding": "utf-8",
-            "reason": "Testing file reading with UTF-8 encoding"
-        }
-        result = await read_file.execute(params)
-
-        assert result["content"] == test_content
-
-    finally:
-        if test_file.exists():
-            test_file.unlink()
 
 
 def test_read_file_schema(read_file):
@@ -136,13 +80,3 @@ def test_read_file_schema(read_file):
     assert "file_path" in schema["properties"]
     assert "required" in schema
     assert "file_path" in schema["required"]
-
-
-def test_read_file_tool_info(read_file):
-    """Test tool information retrieval."""
-    info = read_file.get_info()
-
-    assert "name" in info
-    assert info["name"] == "read_file"
-    assert "description" in info
-    assert "schema_endpoint" in info

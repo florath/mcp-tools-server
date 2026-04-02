@@ -7,11 +7,33 @@
     "security": {
         "max_file_size_mb": 100,
         "allowed_file_extensions": [
-            ".json", ".yaml", ".yml", ".txt", ".py", ".js", ".ts", 
-            ".md", ".csv", ".xml", ".html", ".css", ".sql", ".toml",
-            ".cfg", ".ini", ".conf", ".sh", ".bat", ".dockerfile", 
-            ".dockerignore", ".gitignore", ".env", ".lock", ".rs",
-	    ".log", ".toml"
+            ".json",
+            ".yaml",
+            ".yml",
+            ".txt",
+            ".py",
+            ".js",
+            ".ts",
+            ".md",
+            ".csv",
+            ".xml",
+            ".html",
+            ".css",
+            ".sql",
+            ".toml",
+            ".cfg",
+            ".ini",
+            ".conf",
+            ".sh",
+            ".bat",
+            ".dockerfile",
+            ".dockerignore",
+            ".gitignore",
+            ".env",
+            ".lock",
+            ".rs",
+            ".log",
+            ".toml"
         ]
     },
     "sessions": {
@@ -23,24 +45,38 @@
         "format": "json"
     },
     "tools": {
-        "file_reader": {
+        "read_file": {
             "enabled": true,
             "max_files_per_request": 10
         },
-        "file_writer": {
+        "write_file": {
             "enabled": true
         },
-        "file_remover": {
+        "remove_file": {
             "enabled": true
         },
-        "python_linter": {
-            "enabled": true,
-            "timeout_seconds": 60
-        },
-        "directory_manager": {
+        "move_file": {
             "enabled": true
         },
-        "file_editor": {
+        "edit_file": {
+            "enabled": true
+        },
+        "find_files": {
+            "enabled": true
+        },
+        "search_content": {
+            "enabled": true
+        },
+        "list_dir": {
+            "enabled": true
+        },
+        "mkdir": {
+            "enabled": true
+        },
+        "rmdir": {
+            "enabled": true
+        },
+        "dir_exists": {
             "enabled": true
         }
     }

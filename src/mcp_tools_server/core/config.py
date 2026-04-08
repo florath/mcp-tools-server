@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -17,6 +17,10 @@ class SecurityConfig(BaseModel):
     """Security configuration."""
     max_file_size_mb: int = 100
     allowed_file_extensions: List[str] = Field(default_factory=list)
+    allowed_directory: Optional[str] = None
+    """If set, all session directories must be within this path.
+    Prevents the REST API from being used to access arbitrary filesystem locations.
+    When omitted, any existing directory may be used as a session root."""
 
 
 class LoggingConfig(BaseModel):
@@ -58,11 +62,11 @@ class Config(BaseModel):
 def load_config(config_path: str) -> Config:
     """Load configuration from JSON file."""
     config_file = Path(config_path)
-    
+
     if not config_file.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
+
     with open(config_file, 'r', encoding='utf-8') as f:
         config_data = json.load(f)
-    
+
     return Config(**config_data)

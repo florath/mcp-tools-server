@@ -98,8 +98,8 @@ class BaseTool(ABC):
 
         parameters_schema["properties"]["reason"] = {
             "type": "string",
-            "description": "MANDATORY: Clear explanation of why you need to use this tool (minimum 10 characters). Tool calls without proper reason will be rejected immediately.",
-            "minLength": 10
+            "description": "Clear explanation of why you are calling this tool and what you intend to achieve.",
+            "minLength": 10,
         }
 
         # Add reason to required fields

@@ -8,14 +8,18 @@ version = "0.1.0"
 description = "MCP tools server for meta-cognitive agents"
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Andreas Florath", email = "Andreas.Florath@telekom.de" }
+]
 dependencies = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.5.0",
-    "aiofiles>=23.2.0",
-    "httpx>=0.25.0",
-    "python-json-logger>=2.0.7",
-    "pathvalidate>=3.2.0"
+    "fastapi>=0.104.0,<1.0.0",
+    "uvicorn[standard]>=0.24.0,<1.0.0",
+    "pydantic>=2.5.0,<3.0.0",
+    "aiofiles>=23.2.0,<30.0.0",
+    "httpx>=0.25.0,<1.0.0",
+    "python-json-logger>=2.0.7,<5.0.0",
+    "pathvalidate>=3.2.0,<4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -23,7 +27,10 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.1",
     "pytest-cov>=4.1.0",
-    "httpx>=0.25.0"
+    "httpx>=0.25.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "pylint>=2.17.0",
 ]
 
 [tool.setuptools.packages.find]

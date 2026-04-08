@@ -29,10 +29,48 @@ class SearchContentTool(BaseTool):
             "properties": {
                 "search_term": {
                     "type": "string",
-                    "description": "Text pattern to search for in files"
-                }
+                    "description": "Text or regex pattern to search for in files",
+                },
+                "search_directory": {
+                    "type": "string",
+                    "description": "Subdirectory to search in (relative path). Defaults to the session root.",
+                },
+                "file_pattern": {
+                    "type": "string",
+                    "description": "Glob pattern to filter which files are searched, e.g. '*.py', '*.md'. Default: '*' (all files).",
+                    "default": "*",
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "Whether the search is case-sensitive. Default: false.",
+                    "default": False,
+                },
+                "use_regex": {
+                    "type": "boolean",
+                    "description": "Treat search_term as a regular expression. Default: false (literal match).",
+                    "default": False,
+                },
+                "include_line_numbers": {
+                    "type": "boolean",
+                    "description": "Include line numbers in results. Default: true.",
+                    "default": True,
+                },
+                "context_lines": {
+                    "type": "integer",
+                    "description": "Number of lines before and after each match to include for context (0–10). Default: 0.",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 10,
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of matches to return (1–1000). Default: 100.",
+                    "default": 100,
+                    "minimum": 1,
+                    "maximum": 1000,
+                },
             },
-            "required": ["search_term"]
+            "required": ["search_term"],
         }
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:

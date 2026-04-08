@@ -27,10 +27,37 @@ class FindFilesTool(BaseTool):
             "properties": {
                 "pattern": {
                     "type": "string",
-                    "description": "Pattern to search for (supports wildcards like *.py, test_*, etc.)"
-                }
+                    "description": "Filename pattern with wildcards, e.g. '*.py', 'test_*', '*.{ts,tsx}'.",
+                },
+                "search_directory": {
+                    "type": "string",
+                    "description": "Subdirectory to search in (relative path). Defaults to the session root.",
+                },
+                "file_type": {
+                    "type": "string",
+                    "enum": ["both", "files", "directories"],
+                    "description": "What to match: 'files', 'directories', or 'both' (default).",
+                    "default": "both",
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Search subdirectories recursively. Default: true.",
+                    "default": True,
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "Match pattern case-sensitively. Default: false.",
+                    "default": False,
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of results to return (1–1000). Default: 100.",
+                    "default": 100,
+                    "minimum": 1,
+                    "maximum": 1000,
+                },
             },
-            "required": ["pattern"]
+            "required": ["pattern"],
         }
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:

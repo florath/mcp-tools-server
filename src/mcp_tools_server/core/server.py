@@ -29,9 +29,15 @@ class MCPToolsServer:
         )
         
         # Initialize session manager
+        allowed_base = (
+            Path(config.security.allowed_directory).resolve()
+            if config.security.allowed_directory
+            else None
+        )
         self.session_manager = SessionManager(
             timeout_seconds=config.sessions.timeout_seconds,
-            max_sessions=config.sessions.max_sessions
+            max_sessions=config.sessions.max_sessions,
+            allowed_base_directory=allowed_base,
         )
         
         # Initialize security validator
@@ -258,14 +264,16 @@ class MCPToolsServer:
 
                 # Resolve session directory for this MCP session and activate it
                 # so the security validator scopes access correctly.
+                # sec_token MUST be initialised before the try so the finally
+                # can unconditionally check it regardless of where an exception
+                # is raised inside the block.
                 sec_token = None
-                if mcp_session_id and mcp_session_id in self._mcp_sessions:
-                    rest_session_id = self._mcp_sessions[mcp_session_id]
-                    session_dir = await self.session_manager.get_session_directory(rest_session_id)
-                    if session_dir:
-                        sec_token = self.security_validator.set_session_directory(session_dir)
-
                 try:
+                    if mcp_session_id and mcp_session_id in self._mcp_sessions:
+                        rest_session_id = self._mcp_sessions[mcp_session_id]
+                        session_dir = await self.session_manager.get_session_directory(rest_session_id)
+                        if session_dir:
+                            sec_token = self.security_validator.set_session_directory(session_dir)
                     result = await tool_instance.execute(arguments)
                     content_text = json.dumps(result) if isinstance(result, (dict, list)) else str(result)
                     return JSONResponse(content={

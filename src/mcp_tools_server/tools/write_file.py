@@ -36,6 +36,16 @@ class WriteFileTool(BaseTool):
             
             if not file_path:
                 raise ValueError("file_path parameter is required")
+
+            # Validate content size before touching the filesystem
+            if self.security_validator:
+                content_bytes = len(content.encode(encoding, errors='replace'))
+                if content_bytes > self.security_validator.max_file_size_bytes:
+                    raise SecurityError(
+                        f"Content size {content_bytes} bytes exceeds the maximum "
+                        f"allowed size of {self.security_validator.max_file_size_bytes} bytes "
+                        f"({self.security_validator.config.max_file_size_mb} MB)"
+                    )
             
             # Convert to Path object and resolve relative paths
             if self.security_validator:
@@ -132,7 +142,7 @@ class WriteFileTool(BaseTool):
             if not allowed_extensions:
                 return True  # No restrictions
             return file_path.suffix.lower() in [ext.lower() for ext in allowed_extensions]
-        except:
+        except Exception:
             return True  # Default to allow if check fails
     
     def get_parameters_schema(self) -> Dict[str, Any]:

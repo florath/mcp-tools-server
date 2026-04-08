@@ -21,7 +21,7 @@ The server provides the following tools (11 total):
 - **write_file** - Create or overwrite files with security validation
 - **remove_file** - Remove files with security validation
 - **move_file** - Move or rename files with security validation
-- **edit_file** - Edit files using line-number based operations (edit, insert, delete)
+- **edit_file** - Edit files by exact string replacement
 - **find_files** - Find files and directories by name patterns
 
 ### Directory Operations
@@ -166,14 +166,12 @@ Supported MCP methods:
 
 #### edit_file
 - **Endpoint**: `POST /edit_file/v1`
-- **Purpose**: Edit files using line-number based operations (edit, insert, delete)
+- **Purpose**: Edit a file by replacing an exact string
 - **Parameters**:
   - `file_path`: Path to the file to edit
-  - `operation`: Operation to perform - 'edit', 'insert', or 'delete'
-  - `line_number`: Line number to operate on (1-indexed)
-  - `line_end`: End line number for range operations (optional)
-  - `old_content`: Expected old content for verification (edit/delete operations)
-  - `new_content`: New content to insert or replace with (edit/insert operations)
+  - `old_content`: Exact text to find (must match exactly once, unless `replace_all=true`)
+  - `new_content`: Replacement text
+  - `replace_all`: Replace every occurrence instead of requiring uniqueness (default: false)
   - `encoding`: File encoding (default: utf-8)
   - `reason`: Reason for the operation
 
@@ -215,7 +213,7 @@ The server is configured via a JSON configuration file. Here's the complete stru
   "server": {
     "host": "127.0.0.1",
     "port": 7091,
-    "debug": true
+    "debug": false
   },
   "security": {
     "allowed_directory": "/tmp/workspace",
@@ -290,23 +288,23 @@ The server is configured via a JSON configuration file. Here's the complete stru
 
 6. **Create a directory**:
    ```bash
-   curl -X POST http://localhost:7091/list_dir/v1 \
+   curl -X POST http://localhost:7091/mkdir/v1 \
      -H "Content-Type: application/json" \
-     -d '{"operation": "create", "directory_path": "/tmp/workspace/new_folder"}'
+     -d '{"directory_path": "new_folder", "reason": "create output directory"}'
    ```
 
 7. **List directory contents**:
    ```bash
    curl -X POST http://localhost:7091/list_dir/v1 \
      -H "Content-Type: application/json" \
-     -d '{"operation": "list", "directory_path": "/tmp/workspace"}'
+     -d '{"directory_path": ".", "reason": "list workspace"}'
    ```
 
-8. **Edit a specific line in a file**:
+8. **Edit a file (string replacement)**:
    ```bash
    curl -X POST http://localhost:7091/edit_file/v1 \
      -H "Content-Type: application/json" \
-     -d '{"operation": "edit", "file_path": "/tmp/workspace/script.py", "line_number": 5, "old_content": "old line", "new_content": "new line"}'
+     -d '{"file_path": "script.py", "old_content": "old line", "new_content": "new line", "reason": "fix typo"}'
    ```
 
 ### Session-Based Workflow Examples
@@ -336,10 +334,10 @@ The server is configured via a JSON configuration file. Here's the complete stru
       -d '{"file_path": "data/config.json", "reason": "Reading config in session"}'
     
     # Create directory within session
-    curl -X POST http://localhost:7091/list_dir/v1 \
+    curl -X POST http://localhost:7091/mkdir/v1 \
       -H "Content-Type: application/json" \
       -H "X-MCP-Session-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-      -d '{"operation": "create", "directory_path": "output", "reason": "Creating output dir"}'
+      -d '{"directory_path": "output", "reason": "Creating output dir"}'
     ```
 
 11. **Check session status**:

@@ -1,40 +1,36 @@
-"""Line-number based file editor for MCP tools server."""
+"""String-replacement based file editor for MCP tools server."""
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 import aiofiles
 
 from .base import BaseTool
 from ..security.validator import SecurityValidator
-
-
 from ..core.structured_logger import logger
 
 
 class EditFileTool(BaseTool):
-    """Edit files using line-number based operations.
+    """Edit files using exact string replacement.
 
-    Supports three operations:
-    - ``edit``   — replace a line range (requires old_content for verification)
-    - ``insert`` — insert text before a given line (or append after last line)
-    - ``delete`` — delete a line range (requires old_content for verification)
-
-    Using line numbers avoids the duplicate-string ambiguity problem: if the
-    same text appears on multiple lines only the targeted line is touched.
-    ``old_content`` verification on edit/delete prevents silent overwrites when
-    the file has changed since it was last read.
+    Finds ``old_content`` in the file and replaces it with ``new_content``.
+    By default the call is rejected when ``old_content`` matches more than
+    one location — the model must then supply enough surrounding context to
+    make the match unique.  Pass ``replace_all=true`` to replace every
+    occurrence intentionally (useful for renaming a variable, updating an
+    import path, etc.).
     """
 
     def __init__(self, security_validator: SecurityValidator):
         super().__init__(
             name="edit_file",
             description=(
-                "Edit a file by line number: replace, insert, or delete lines. "
-                "Use read_file with include_line_numbers=True first to get "
-                "the exact line numbers. old_content is required for edit/delete "
-                "to verify you are changing the right lines."
+                "Edit a file by replacing an exact string. "
+                "Provide old_content (the exact text to find) and new_content "
+                "(the replacement). Fails if old_content is not found or matches "
+                "more than one location — add surrounding context to make it "
+                "unique, or set replace_all=true to replace every occurrence."
             ),
             security_validator=security_validator,
         )
@@ -47,33 +43,25 @@ class EditFileTool(BaseTool):
                     "type": "string",
                     "description": "Path to the file to edit",
                 },
-                "operation": {
-                    "type": "string",
-                    "enum": ["edit", "insert", "delete"],
-                    "description": (
-                        "'edit': replace lines line_number..line_end with new_content. "
-                        "'insert': insert new_content before line_number "
-                        "(use line_number = total_lines+1 to append). "
-                        "'delete': delete lines line_number..line_end."
-                    ),
-                },
-                "line_number": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "description": "Start line (1-indexed)",
-                },
-                "line_end": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "description": "End line for range operations (inclusive, defaults to line_number)",
-                },
                 "old_content": {
                     "type": "string",
-                    "description": "Expected current content of the targeted lines (required for edit/delete)",
+                    "description": (
+                        "Exact text to find in the file. Must match exactly once "
+                        "unless replace_all=true. Include surrounding lines for "
+                        "context if the snippet might appear elsewhere."
+                    ),
                 },
                 "new_content": {
                     "type": "string",
-                    "description": "Replacement or insertion text (required for edit/insert)",
+                    "description": "Text to replace old_content with.",
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Replace every occurrence of old_content. "
+                        "Default false (fails if more than one match)."
+                    ),
                 },
                 "encoding": {
                     "type": "string",
@@ -81,37 +69,22 @@ class EditFileTool(BaseTool):
                     "description": "File encoding (default: utf-8)",
                 },
             },
-            "required": ["file_path", "operation", "line_number"],
+            "required": ["file_path", "old_content", "new_content"],
         }
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         file_path = params.get("file_path")
-        operation = params.get("operation")
-        line_number = params.get("line_number")
-        line_end = params.get("line_end")
         old_content = params.get("old_content")
-        new_content = params.get("new_content", "")
+        new_content = params.get("new_content")
+        replace_all = params.get("replace_all", False)
         encoding = params.get("encoding", "utf-8")
 
         if not file_path:
             return {"success": False, "error": "file_path is required"}
-        if operation not in ("edit", "insert", "delete"):
-            return {"success": False, "error": "operation must be 'edit', 'insert', or 'delete'"}
-        if line_number is None:
-            return {"success": False, "error": "line_number is required"}
-
-        # Infer line_end from old_content when not explicitly provided.
-        # This lets callers omit line_end for multi-line edits/deletes —
-        # they just supply old_content and the range is computed automatically.
-        if line_end is None and old_content is not None:
-            line_end = line_number + len(old_content.splitlines()) - 1
-
-        if line_end is not None and line_end < line_number:
-            return {"success": False, "error": "line_end must be >= line_number"}
-        if operation in ("edit", "delete") and old_content is None:
-            return {"success": False, "error": f"old_content is required for '{operation}'"}
-        if operation in ("edit", "insert") and new_content is None:
-            return {"success": False, "error": f"new_content is required for '{operation}'"}
+        if old_content is None:
+            return {"success": False, "error": "old_content is required"}
+        if new_content is None:
+            return {"success": False, "error": "new_content is required"}
 
         try:
             validated_path = self.security_validator.validate_file_path(file_path)
@@ -126,56 +99,37 @@ class EditFileTool(BaseTool):
         except UnicodeDecodeError as e:
             return {"success": False, "error": f"Encoding error: {e}"}
 
-        lines: List[str] = content.splitlines(keepends=True)
-        total = len(lines)
+        count = content.count(old_content)
 
-        if operation == "insert":
-            if line_number > total + 1:
-                return {
-                    "success": False,
-                    "error": f"line_number {line_number} out of range (file has {total} lines; use {total+1} to append)",
-                }
-            insert_text = new_content if new_content.endswith("\n") else new_content + "\n"
-            lines = lines[:line_number - 1] + [insert_text] + lines[line_number - 1:]
+        if count == 0:
+            return {"success": False, "error": "old_content not found in file"}
 
-        else:  # edit or delete
-            end_idx = (line_end if line_end is not None else line_number)
-            if line_number > total:
-                return {"success": False, "error": f"line_number {line_number} out of range (file has {total} lines)"}
-            if end_idx > total:
-                return {"success": False, "error": f"line_end {end_idx} out of range (file has {total} lines)"}
+        if count > 1 and not replace_all:
+            return {
+                "success": False,
+                "error": (
+                    f"old_content matches {count} locations — add more surrounding "
+                    f"context to make it unique, or set replace_all=true to replace all"
+                ),
+            }
 
-            # Verify old_content against the targeted lines
-            targeted = "".join(lines[line_number - 1: end_idx])
-            if targeted.rstrip("\n") != old_content.rstrip("\n"):
-                return {
-                    "success": False,
-                    "error": (
-                        "old_content does not match the file at the specified lines — "
-                        "re-read the file to get the current content"
-                    ),
-                }
+        new_file_content = content.replace(old_content, new_content)
 
-            if operation == "edit":
-                replacement = new_content if new_content.endswith("\n") else new_content + "\n"
-                lines = lines[:line_number - 1] + [replacement] + lines[end_idx:]
-            else:  # delete
-                lines = lines[:line_number - 1] + lines[end_idx:]
-
-        new_content_str = "".join(lines)
         try:
             async with aiofiles.open(validated_path, "w", encoding=encoding) as f:
-                await f.write(new_content_str)
+                await f.write(new_file_content)
         except Exception as e:
             return {"success": False, "error": f"Failed to write file: {e}"}
 
-        self.log_tool_result({"success": True, "operation": operation, "path": self._normalize_path_for_response(validated_path)})
+        replacements = count if replace_all else 1
+        self.log_tool_result({
+            "success": True,
+            "replacements": replacements,
+            "path": self._normalize_path_for_response(validated_path),
+        })
         return {
             "success": True,
             "file_path": self._normalize_path_for_response(validated_path),
-            "operation": operation,
-            "line_number": line_number,
-            "line_end": line_end or line_number,
-            "total_lines": len(lines),
+            "replacements": replacements,
             "size_bytes": validated_path.stat().st_size,
         }
